@@ -2,7 +2,7 @@ name: germana
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none' # Remove this line if you wish to publish on pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -41,6 +41,8 @@ dependencies:
   uuid: ^4.5.3
   google_maps_flutter: ^2.17.0
   flutter_polyline_points: ^3.1.0
+  shared_preferences: ^2.5.3
+  permission_handler: ^11.4.0
 
 dev_dependencies:
   flutter_test:
@@ -60,8 +62,7 @@ dev_dependencies:
 flutter:
 
   # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
+  # included with the material Icons class.
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:

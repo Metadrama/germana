@@ -24,7 +24,7 @@ class LedgerScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         children: [
-          Text('Lejar', style: AppTextStyles.display(context)),
+          Text('History', style: AppTextStyles.display(context)),
           const SizedBox(height: 20),
 
           // Summary hero card
@@ -81,7 +81,7 @@ class LedgerScreen extends StatelessWidget {
           ),
 
           const SizedBox(height: 24),
-          const SectionLabel(label: 'Transaksi'),
+          const SectionLabel(label: 'Receipts'),
 
           ...mockLedger.map((entry) => _TransactionTile(entry: entry)),
         ],

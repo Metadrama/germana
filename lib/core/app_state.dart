@@ -1,14 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum UserRole { passenger, driver, both }
+
+enum PersonSex { male, female }
 
 /// Centralized app state — profile data, theme mode, and ride state.
 /// Injected via InheritedWidget so all screens can read/write.
 class AppState extends ChangeNotifier {
+  bool _isHydrated = false;
+  bool get isHydrated => _isHydrated;
+
+  static const _kThemeMode = 'theme_mode';
+  static const _kIsAuthenticated = 'is_authenticated';
+  static const _kIsProfileComplete = 'is_profile_complete';
+  static const _kLocationPermission = 'location_permission_granted';
+  static const _kNotificationPermission = 'notification_permission_granted';
+  static const _kName = 'profile_name';
+  static const _kFaculty = 'profile_faculty';
+  static const _kEmail = 'profile_email';
+  static const _kPhone = 'profile_phone';
+  static const _kSex = 'profile_sex';
+  static const _kCarModel = 'car_model';
+  static const _kCarPlate = 'car_plate';
+  static const _kCarColor = 'car_color';
+  static const _kCarFuelConsumption = 'car_fuel_consumption';
+  static const _kCurrentLocationLabel = 'current_location_label';
+  static const _kUserRole = 'user_role';
+
+  // --- Auth & onboarding ---
+  bool _isAuthenticated = false;
+  bool get isAuthenticated => _isAuthenticated;
+
+  bool _isProfileComplete = false;
+  bool get isProfileComplete => _isProfileComplete;
+
+  bool _locationPermissionGranted = false;
+  bool get locationPermissionGranted => _locationPermissionGranted;
+
+  bool _notificationPermissionGranted = false;
+  bool get notificationPermissionGranted => _notificationPermissionGranted;
+
+  String _emailDomain = 'smail.unikl.edu.my';
+  String get emailDomain => _emailDomain;
+
+  UserRole _userRole = UserRole.both;
+  UserRole get userRole => _userRole;
+
+  String _currentLocationLabel = 'UniKL MIIT, Gombak';
+  String get currentLocationLabel => _currentLocationLabel;
+
   // --- Theme ---
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
     notifyListeners();
+    _persist();
   }
 
   // --- Profile ---
@@ -30,6 +78,9 @@ class AppState extends ChangeNotifier {
 
   String _phone = '+60 11-1234 5678';
   String get phone => _phone;
+
+  PersonSex _sex = PersonSex.male;
+  PersonSex get sex => _sex;
 
   // Car profile
   String _carModel = 'Perodua Myvi';
@@ -54,18 +105,76 @@ class AppState extends ChangeNotifier {
   int _ridesAsDriver = 3;
   int get ridesAsDriver => _ridesAsDriver;
 
+  // --- Auth & permission mutators ---
+  bool canSignInWithEmail(String email) {
+    return email.trim().toLowerCase().endsWith('@$emailDomain');
+  }
+
+  bool signIn(String email) {
+    if (!canSignInWithEmail(email)) return false;
+    _email = email.trim().toLowerCase();
+    _isAuthenticated = true;
+    notifyListeners();
+    _persist();
+    return true;
+  }
+
+  void signOut() {
+    _isAuthenticated = false;
+    _isProfileComplete = false;
+    _locationPermissionGranted = false;
+    _notificationPermissionGranted = false;
+    notifyListeners();
+    _persist();
+  }
+
+  void setProfileComplete(bool isComplete) {
+    _isProfileComplete = isComplete;
+    notifyListeners();
+    _persist();
+  }
+
+  bool get hasRequiredPermissions {
+    return _locationPermissionGranted && _notificationPermissionGranted;
+  }
+
+  void setPermissions({
+    bool? location,
+    bool? notifications,
+  }) {
+    if (location != null) _locationPermissionGranted = location;
+    if (notifications != null) _notificationPermissionGranted = notifications;
+    notifyListeners();
+    _persist();
+  }
+
+  void setUserRole(UserRole role) {
+    _userRole = role;
+    notifyListeners();
+    _persist();
+  }
+
+  void setCurrentLocationLabel(String label) {
+    _currentLocationLabel = label;
+    notifyListeners();
+    _persist();
+  }
+
   // --- Mutators ---
   void updateProfile({
     String? name,
     String? faculty,
     String? email,
     String? phone,
+    PersonSex? sex,
   }) {
     if (name != null) _name = name;
     if (faculty != null) _faculty = faculty;
     if (email != null) _email = email;
     if (phone != null) _phone = phone;
+    if (sex != null) _sex = sex;
     notifyListeners();
+    _persist();
   }
 
   void updateCar({
@@ -79,11 +188,97 @@ class AppState extends ChangeNotifier {
     if (color != null) _carColor = color;
     if (fuelConsumption != null) _carFuelConsumption = fuelConsumption;
     notifyListeners();
+    _persist();
   }
 
   void incrementRides() {
     _totalRides++;
     notifyListeners();
+    _persist();
+  }
+
+  Future<void> hydrate() async {
+    if (_isHydrated) return;
+    final prefs = await SharedPreferences.getInstance();
+
+    _themeMode = _themeModeFromString(prefs.getString(_kThemeMode));
+    _isAuthenticated = prefs.getBool(_kIsAuthenticated) ?? _isAuthenticated;
+    _isProfileComplete =
+        prefs.getBool(_kIsProfileComplete) ?? _isProfileComplete;
+    _locationPermissionGranted =
+        prefs.getBool(_kLocationPermission) ?? _locationPermissionGranted;
+    _notificationPermissionGranted =
+        prefs.getBool(_kNotificationPermission) ?? _notificationPermissionGranted;
+
+    _name = prefs.getString(_kName) ?? _name;
+    _faculty = prefs.getString(_kFaculty) ?? _faculty;
+    _email = prefs.getString(_kEmail) ?? _email;
+    _phone = prefs.getString(_kPhone) ?? _phone;
+    _sex = _sexFromString(prefs.getString(_kSex));
+
+    _carModel = prefs.getString(_kCarModel) ?? _carModel;
+    _carPlate = prefs.getString(_kCarPlate) ?? _carPlate;
+    _carColor = prefs.getString(_kCarColor) ?? _carColor;
+    _carFuelConsumption =
+        prefs.getDouble(_kCarFuelConsumption) ?? _carFuelConsumption;
+
+    _currentLocationLabel =
+        prefs.getString(_kCurrentLocationLabel) ?? _currentLocationLabel;
+    _userRole = _roleFromString(prefs.getString(_kUserRole));
+
+    _isHydrated = true;
+    notifyListeners();
+  }
+
+  Future<void> _persist() async {
+    if (!_isHydrated) return;
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(_kThemeMode, _themeMode.name);
+    await prefs.setBool(_kIsAuthenticated, _isAuthenticated);
+    await prefs.setBool(_kIsProfileComplete, _isProfileComplete);
+    await prefs.setBool(_kLocationPermission, _locationPermissionGranted);
+    await prefs.setBool(_kNotificationPermission, _notificationPermissionGranted);
+
+    await prefs.setString(_kName, _name);
+    await prefs.setString(_kFaculty, _faculty);
+    await prefs.setString(_kEmail, _email);
+    await prefs.setString(_kPhone, _phone);
+    await prefs.setString(_kSex, _sex.name);
+
+    await prefs.setString(_kCarModel, _carModel);
+    await prefs.setString(_kCarPlate, _carPlate);
+    await prefs.setString(_kCarColor, _carColor);
+    await prefs.setDouble(_kCarFuelConsumption, _carFuelConsumption);
+
+    await prefs.setString(_kCurrentLocationLabel, _currentLocationLabel);
+    await prefs.setString(_kUserRole, _userRole.name);
+  }
+
+  ThemeMode _themeModeFromString(String? value) {
+    switch (value) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  PersonSex _sexFromString(String? value) {
+    return value == PersonSex.female.name ? PersonSex.female : PersonSex.male;
+  }
+
+  UserRole _roleFromString(String? value) {
+    switch (value) {
+      case 'passenger':
+        return UserRole.passenger;
+      case 'driver':
+        return UserRole.driver;
+      default:
+        return UserRole.both;
+    }
   }
 }
 

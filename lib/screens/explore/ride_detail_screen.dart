@@ -23,6 +23,10 @@ class RideDetailScreen extends StatelessWidget {
     return 'Bertolak ${DateFormat('EEE, h:mm a').format(dt)}';
   }
 
+  String _sexLabel() {
+    return ride.driverSex == DriverSex.female ? 'Perempuan' : 'Lelaki';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
@@ -174,6 +178,9 @@ class RideDetailScreen extends StatelessWidget {
                                     Text('Identiti disahkan',
                                         style: AppTextStyles.caption(context)
                                             .copyWith(color: AppColors.accentBlue)),
+                                    const SizedBox(width: 8),
+                                    Text('· ${_sexLabel()}',
+                                        style: AppTextStyles.caption(context)),
                                   ],
                                 ),
                               ],
@@ -192,6 +199,18 @@ class RideDetailScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
+                          _DetailRow(
+                            icon: Icons.pin_drop_outlined,
+                            label: 'Pickup (gathering point)',
+                            value: ride.pickupAddress,
+                          ),
+                          Divider(height: 20, color: colors.divider),
+                          _DetailRow(
+                            icon: Icons.straighten_rounded,
+                            label: 'Distance',
+                            value: '${ride.distanceKm.toStringAsFixed(1)} km',
+                          ),
+                          Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.directions_car_rounded,
                             label: 'Kereta',
@@ -213,6 +232,29 @@ class RideDetailScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+
+                    if (ride.carPhotoUrl != null && ride.carPhotoUrl!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      GlassBox(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Gambar kereta', style: AppTextStyles.caption(context)),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.network(
+                                ride.carPhotoUrl!,
+                                height: 160,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 16),
 
@@ -252,7 +294,7 @@ class RideDetailScreen extends StatelessWidget {
               child: SizedBox(
                 width: double.infinity,
                 child: PillButton(
-                  label: 'Tempah  ·  RM ${ride.totalPrice.toStringAsFixed(2)}',
+                  label: 'Proceed Payment  ·  RM ${ride.totalPrice.toStringAsFixed(2)}',
                   expand: true,
                   onPressed: () {
                     Navigator.of(context).push(

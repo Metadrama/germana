@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/data/mock_rides.dart';
+import 'package:germana/models/ride_model.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/ride_card.dart';
 import 'package:germana/widgets/section_label.dart';
@@ -28,6 +29,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
     final state = AppStateProvider.of(context);
+    final topDestinations = mockRides.take(5).toList();
     final now = DateTime.now();
     final greeting = now.hour < 12
         ? 'Selamat pagi'
@@ -55,6 +57,44 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
 
                   const SizedBox(height: 20),
+
+                  // Location
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.glassSurface,
+                      borderRadius: BorderRadius.circular(AppRadius.chip),
+                      border: Border.all(color: colors.glassBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.my_location_rounded,
+                          size: 16,
+                          color: colors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            state.currentLocationLabel,
+                            style: AppTextStyles.captionBold(context),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          'Manual',
+                          style: AppTextStyles.caption(context).copyWith(
+                            color: AppColors.accentBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
 
                   // Search bar
                   GestureDetector(
@@ -130,6 +170,63 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
 
                   const SizedBox(height: 20),
+
+                  const SectionLabel(label: 'Destinations'),
+                  const SizedBox(height: 8),
+
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: topDestinations.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final ride = topDestinations[index];
+                        final sex = ride.driverSex == DriverSex.female
+                            ? 'Perempuan'
+                            : 'Lelaki';
+
+                        return Container(
+                          width: 220,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors.glassSurface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: colors.glassBorder),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ride.destination,
+                                style: AppTextStyles.captionBold(context)
+                                    .copyWith(fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${ride.distanceKm.toStringAsFixed(1)} km · RM ${ride.totalPrice.toStringAsFixed(2)}',
+                                style: AppTextStyles.caption(context),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${ride.seatsLeft} seats · ${ride.carModel}',
+                                style: AppTextStyles.caption(context),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sex: $sex',
+                                style: AppTextStyles.caption(context),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   SectionLabel(
                     label: 'Perjalanan tersedia',

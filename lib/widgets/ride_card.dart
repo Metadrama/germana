@@ -28,6 +28,10 @@ class RideCard extends StatelessWidget {
     return DateFormat('EEE, h:mm a').format(dt);
   }
 
+  String _sexLabel() {
+    return ride.driverSex == DriverSex.female ? 'Perempuan' : 'Lelaki';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
@@ -92,19 +96,46 @@ class RideCard extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 // Car + departure info
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 6,
+                  children: [
+                    _metaItem(
+                      context,
+                      icon: Icons.directions_car_rounded,
+                      label: ride.carModel,
+                    ),
+                    _metaItem(
+                      context,
+                      icon: Icons.straighten_rounded,
+                      label: '${ride.distanceKm.toStringAsFixed(1)} km',
+                    ),
+                    _metaItem(
+                      context,
+                      icon: Icons.badge_outlined,
+                      label: _sexLabel(),
+                    ),
+                    _metaItem(
+                      context,
+                      icon: Icons.schedule_rounded,
+                      label: 'Masa: ${_formatTime(ride.departureTime)}',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
                 Row(
                   children: [
-                    Icon(Icons.directions_car_rounded,
+                    Icon(Icons.pin_drop_outlined,
                         size: 14, color: colors.textTertiary),
                     const SizedBox(width: 4),
-                    Text(ride.carModel, style: AppTextStyles.caption(context)),
-                    const SizedBox(width: 12),
-                    Icon(Icons.schedule_rounded,
-                        size: 14, color: colors.textTertiary),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Bertolak dalam ${_formatTime(ride.departureTime)}',
-                      style: AppTextStyles.caption(context),
+                    Expanded(
+                      child: Text(
+                        'Pickup: ${ride.pickupAddress}',
+                        style: AppTextStyles.caption(context),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -128,7 +159,10 @@ class RideCard extends StatelessWidget {
                               style: AppTextStyles.price(context),
                             ),
                             const SizedBox(width: 4),
-                            Text('/tempat', style: AppTextStyles.caption(context)),
+                            Text(
+                              '/tempat (fair rate + comm)',
+                              style: AppTextStyles.caption(context),
+                            ),
                           ],
                         ),
                       ],
@@ -153,6 +187,22 @@ class RideCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _metaItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+  }) {
+    final colors = GermanaColors.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: colors.textTertiary),
+        const SizedBox(width: 4),
+        Text(label, style: AppTextStyles.caption(context)),
+      ],
     );
   }
 }

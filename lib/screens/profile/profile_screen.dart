@@ -25,7 +25,7 @@ class ProfileScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Profil', style: AppTextStyles.display(context)),
+              Text('Driver Info', style: AppTextStyles.display(context)),
               // Edit button
               IconButton(
                 onPressed: () {
@@ -87,6 +87,11 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(state.email,
                     style: AppTextStyles.caption(context)),
+                const SizedBox(height: 6),
+                Text(
+                  state.sex == PersonSex.female ? 'Perempuan' : 'Lelaki',
+                  style: AppTextStyles.captionBold(context),
+                ),
                 const SizedBox(height: 6),
 
                 // Faculty badge

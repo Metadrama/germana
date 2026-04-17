@@ -1,11 +1,17 @@
 /// Data model for a carpool ride listing.
+enum DriverSex { male, female }
+
 class RideModel {
   final String id;
   final String origin;
   final String destination;
+  final String pickupAddress;
+  final double distanceKm;
   final String driverAlias;
+  final DriverSex driverSex;
   final String? driverName;    // null until booked (escrow paid)
   final String? carPlate;      // null until booked
+  final String? carPhotoUrl;
   final String carModel;
   final DateTime departureTime;
   final int totalSeats;
@@ -20,9 +26,13 @@ class RideModel {
     required this.id,
     required this.origin,
     required this.destination,
+    String? pickupAddress,
+    this.distanceKm = 0,
     required this.driverAlias,
+    this.driverSex = DriverSex.male,
     this.driverName,
     this.carPlate,
+    this.carPhotoUrl,
     required this.carModel,
     required this.departureTime,
     required this.totalSeats,
@@ -32,7 +42,7 @@ class RideModel {
     required this.platformFee,
     this.isBooked = false,
     this.rating,
-  });
+  }) : pickupAddress = pickupAddress ?? origin;
 
   double get totalPrice => fuelShare + tollShare + platformFee;
 
@@ -45,9 +55,13 @@ class RideModel {
       id: id,
       origin: origin,
       destination: destination,
+      pickupAddress: pickupAddress,
+      distanceKm: distanceKm,
       driverAlias: driverAlias,
+      driverSex: driverSex,
       driverName: name,
       carPlate: plate,
+      carPhotoUrl: carPhotoUrl,
       carModel: carModel,
       departureTime: departureTime,
       totalSeats: totalSeats,

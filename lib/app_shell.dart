@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/screens/explore/explore_screen.dart';
-import 'package:germana/screens/my_rides/my_rides_screen.dart';
 import 'package:germana/screens/ledger/ledger_screen.dart';
 import 'package:germana/screens/profile/profile_screen.dart';
 
@@ -20,16 +19,14 @@ class _AppShellState extends State<AppShell> {
 
   final _screens = const [
     ExploreScreen(),
-    MyRidesScreen(),
     LedgerScreen(),
     ProfileScreen(),
   ];
 
   final _navItems = const [
-    _NavItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: 'Terokai'),
-    _NavItem(icon: Icons.directions_car_outlined, activeIcon: Icons.directions_car_rounded, label: 'Saya'),
-    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long_rounded, label: 'Lejar'),
-    _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profil'),
+    _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Rides'),
+    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long_rounded, label: 'History'),
+    _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
   ];
 
   @override

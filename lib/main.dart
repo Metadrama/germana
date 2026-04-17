@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:germana/core/ambient_background.dart';
 import 'package:germana/core/app_state.dart';
+import 'package:germana/core/ambient_background.dart';
 import 'package:germana/core/theme.dart';
-import 'package:germana/app_shell.dart';
+import 'package:germana/root_flow.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,9 +40,7 @@ class GermanaApp extends StatelessWidget {
             theme: buildGermanaLightTheme(),
             darkTheme: buildGermanaDarkTheme(),
             themeMode: _appState.themeMode,
-            home: const AmbientBackground(
-              child: AppShell(),
-            ),
+            home: const AmbientBackground(child: RootFlow()),
           );
         },
       ),
