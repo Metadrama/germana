@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/core/app_state.dart';
 import 'package:germana/models/ride_model.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/price_breakdown_row.dart';
+import 'package:germana/widgets/ride_map_snippet.dart';
 import 'package:germana/widgets/status_badge.dart';
 import 'package:germana/screens/explore/payment_screen.dart';
-import 'package:germana/core/map_styles.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 /// Full ride detail screen — Hero transition, route viz, driver info, price, CTA.
@@ -33,44 +32,11 @@ class RideDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
     final l10n = AppLocalizations.of(context);
-
-    // Default map location (Kuala Lumpur) since we don't have exact lat/lng in mock
-    const initialCamera = CameraPosition(
-      target: LatLng(3.140853, 101.693207),
-      zoom: 13,
-    );
+    final appState = AppStateProvider.of(context);
 
     return Scaffold(
       backgroundColor: colors.background,
-      body: Stack(
-        children: [
-          // On web, avoid hard crashing when JS Maps SDK is not yet available.
-          Positioned.fill(
-            child: kIsWeb
-                ? DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          colors.background,
-                          colors.background.withValues(alpha: 0.92),
-                        ],
-                      ),
-                    ),
-                  )
-                : GoogleMap(
-                    initialCameraPosition: initialCamera,
-                    zoomControlsEnabled: false,
-                    myLocationButtonEnabled: false,
-                    mapToolbarEnabled: false,
-                    style: Theme.of(context).brightness == Brightness.dark
-                        ? AppMapStyles.darkMapStyle
-                        : AppMapStyles.lightMapStyle,
-                  ),
-          ),
-          
-          SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
             // AppBar
@@ -100,65 +66,15 @@ class RideDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Route visualizer
-                    Hero(
-                      tag: 'ride_${ride.id}',
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: GlassBox(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              // Origin
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 12, height: 12,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.accentBlue,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(ride.origin,
-                                        style: AppTextStyles.title(context)),
-                                  ),
-                                ],
-                              ),
-                              // Connecting line
-                              Padding(
-                                padding: const EdgeInsets.only(left: 5),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 2, height: 32,
-                                      color: colors.textTertiary.withValues(alpha: 0.3),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Destination
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 12, height: 12,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.accentGreen,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(ride.destination,
-                                        style: AppTextStyles.title(context)),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    RideMapSnippet(
+                      pickupLabel: ride.pickupAddress,
+                      destinationLabel: ride.destination,
+                      pickupLat: ride.pickupLat,
+                      pickupLng: ride.pickupLng,
+                      destinationLat: ride.destinationLat,
+                      destinationLng: ride.destinationLng,
+                      userLat: appState.currentLocationLat,
+                      userLng: appState.currentLocationLng,
                     ),
 
                     const SizedBox(height: 16),
@@ -339,8 +255,6 @@ class RideDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-        ], // Stack children
-      ), // Stack
     );
   }
 }

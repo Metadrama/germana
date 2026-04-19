@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -57,9 +59,14 @@ class RouteDetails {
 }
 
 class LocationService {
+  static const Duration _httpTimeout = Duration(seconds: 8);
+  static const int _directionsMaxAttempts = 2;
+  static bool _webDirectionsFallbackLogged = false;
+
   final _uuid = const Uuid();
   String _sessionToken = '';
   static bool _placesApiDisabled = false;
+  static final Map<String, RouteDetails> _routeCache = <String, RouteDetails>{};
 
   // Initialize/refresh session token
   void refreshSessionToken() {
@@ -74,6 +81,16 @@ class LocationService {
   }
 
   bool get isPlacesApiDisabled => _placesApiDisabled;
+
+  String _routeCacheKey(
+    double originLat,
+    double originLng,
+    double destinationLat,
+    double destinationLng,
+  ) {
+    String fmt(double v) => v.toStringAsFixed(5);
+    return '${fmt(originLat)},${fmt(originLng)}->${fmt(destinationLat)},${fmt(destinationLng)}';
+  }
 
   /// Get autocomplete suggestions limited to Malaysia (New Places API).
   Future<List<PlaceSuggestion>> getSuggestions(String query) async {
@@ -99,7 +116,7 @@ class LocationService {
           'X-Goog-Api-Key': AppConfig.googleMapsApiKey,
         },
         body: body,
-      );
+      ).timeout(_httpTimeout);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data.containsKey('suggestions')) {
@@ -116,6 +133,8 @@ class LocationService {
         }
         debugPrint('Places API Status not 200: ${response.statusCode}');
       }
+    } on TimeoutException {
+      debugPrint('LocationService: autocomplete request timed out');
     } catch (e) {
       debugPrint('LocationService Exception: $e');
     }
@@ -138,7 +157,7 @@ class LocationService {
           'X-Goog-Api-Key': AppConfig.googleMapsApiKey,
           'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
         },
-      );
+      ).timeout(_httpTimeout);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -162,6 +181,8 @@ class LocationService {
         }
         debugPrint('Place Details Fetch Error: ${response.statusCode}');
       }
+    } on TimeoutException {
+      debugPrint('LocationService: place details request timed out');
     } catch (e) {
       debugPrint('Place Details Exception: $e');
     }
@@ -170,6 +191,26 @@ class LocationService {
 
   /// Get routing information between two points.
   Future<RouteDetails?> getDirections(PlaceDetails origin, PlaceDetails destination) async {
+    final cacheKey = _routeCacheKey(
+      origin.lat,
+      origin.lng,
+      destination.lat,
+      destination.lng,
+    );
+    final cached = _routeCache[cacheKey];
+    if (cached != null) return cached;
+
+    if (kIsWeb) {
+      // Browser clients cannot call Directions endpoint directly due to CORS.
+      if (!_webDirectionsFallbackLogged) {
+        _webDirectionsFallbackLogged = true;
+        debugPrint('Directions API is not called on web (CORS). Using local estimate.');
+      }
+      final estimate = _buildEstimatedRoute(origin, destination);
+      _routeCache[cacheKey] = estimate;
+      return estimate;
+    }
+
     if (AppConfig.googleMapsApiKey.isEmpty) return null;
     final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/directions/json'
@@ -177,24 +218,111 @@ class LocationService {
         '&destination=${destination.lat},${destination.lng}'
         '&key=${AppConfig.googleMapsApiKey}');
 
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final route = data['routes'][0];
-          final leg = route['legs'][0];
-          
-          return RouteDetails(
-            distanceKm: leg['distance']['value'] / 1000.0, // convert meters to KM
-            durationText: leg['duration']['text'],
-            polylinePoints: route['overview_polyline']['points'],
-          );
+    for (var attempt = 1; attempt <= _directionsMaxAttempts; attempt++) {
+      try {
+        final response = await http.get(url).timeout(_httpTimeout);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['status'] == 'OK') {
+            final route = data['routes'][0];
+            final leg = route['legs'][0];
+
+            final details = RouteDetails(
+              distanceKm: leg['distance']['value'] / 1000.0, // convert meters to KM
+              durationText: leg['duration']['text'],
+              polylinePoints: route['overview_polyline']['points'],
+            );
+            _routeCache[cacheKey] = details;
+            return details;
+          }
+
+          // API-level failure should not be retried blindly.
+          debugPrint('Directions API returned status: ${data['status']}');
+          return null;
         }
+
+        // Retry on transient server-side failures.
+        if (response.statusCode >= 500 && attempt < _directionsMaxAttempts) {
+          continue;
+        }
+        debugPrint('Directions HTTP error: ${response.statusCode}');
+        return null;
+      } on TimeoutException {
+        if (attempt >= _directionsMaxAttempts) {
+          debugPrint('Directions request timed out after $attempt attempts');
+        }
+      } catch (e) {
+        debugPrint('Directions request error: $e');
+        if (attempt >= _directionsMaxAttempts) return null;
       }
-    } catch (e) {
-      // Handle error
     }
+
     return null;
+  }
+
+  RouteDetails _buildEstimatedRoute(PlaceDetails origin, PlaceDetails destination) {
+    final distanceKm = _haversineKm(
+      origin.lat,
+      origin.lng,
+      destination.lat,
+      destination.lng,
+    );
+
+    // Conservative city/intercity blended speed for UX estimate.
+    const avgSpeedKmh = 40.0;
+    final durationMinutes = (distanceKm / avgSpeedKmh * 60).clamp(1, 24 * 60).round();
+
+    return RouteDetails(
+      distanceKm: distanceKm,
+      durationText: _formatDuration(durationMinutes),
+      polylinePoints: '',
+    );
+  }
+
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const earthRadiusKm = 6371.0;
+    final dLat = _degToRad(lat2 - lat1);
+    final dLon = _degToRad(lon2 - lon1);
+    final a =
+        (math.sin(dLat / 2) * math.sin(dLat / 2)) +
+        math.cos(_degToRad(lat1)) *
+            math.cos(_degToRad(lat2)) *
+            (math.sin(dLon / 2) * math.sin(dLon / 2));
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  }
+
+  double _degToRad(double deg) => deg * (math.pi / 180.0);
+
+  String _formatDuration(int totalMinutes) {
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    if (hours == 0) return '${minutes} min';
+    if (minutes == 0) return '${hours}h';
+    return '${hours}h ${minutes}m';
+  }
+
+  Future<RouteDetails?> getDirectionsByCoords({
+    required double originLat,
+    required double originLng,
+    required double destinationLat,
+    required double destinationLng,
+    String originName = 'Origin',
+    String destinationName = 'Destination',
+  }) {
+    return getDirections(
+      PlaceDetails(
+        lat: originLat,
+        lng: originLng,
+        name: originName,
+        address: originName,
+      ),
+      PlaceDetails(
+        lat: destinationLat,
+        lng: destinationLng,
+        name: destinationName,
+        address: destinationName,
+      ),
+    );
   }
 }

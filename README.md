@@ -38,6 +38,34 @@ Notes:
 - Android manifest placeholder also reads the same key from `.env.json`
 	(and still supports env var / Gradle property in CI).
 
+### iOS key setup
+
+For iOS Google Maps SDK, use an xcconfig secret file:
+
+1. Copy `ios/Flutter/MapsKeys.xcconfig.example` to `ios/Flutter/MapsKeys.xcconfig`.
+2. Set `GOOGLE_MAPS_API_KEY` in that file.
+
+`Debug.xcconfig` and `Release.xcconfig` already include this file optionally.
+The key is read from `Info.plist` (`GMSApiKey`) and initialized in `AppDelegate.swift`.
+
+### Route request resilience
+
+The app now applies timeout + retry behavior for route requests and timeout
+handling for Places autocomplete/details to reduce transient network failures.
+
+### Web map snippet note
+
+The web ride map snippet now uses Google Static Maps image rendering for a real
+map preview with pickup/destination markers and optional route overlay.
+Ensure the **Static Maps API** is enabled for your Google Cloud project key.
+
+The app automatically attempts web map snapshots when possible.
+If Google returns an image error (for example 403 due to key restrictions),
+the app automatically falls back to the route preview card for that run.
+
+Also note: browser builds do not call the Directions HTTP endpoint directly
+(CORS blocked). The app uses a local route estimate on web for distance/time.
+
 ### Short local commands
 
 Use one-command scripts instead of typing long flags every time:
@@ -49,6 +77,9 @@ Use one-command scripts instead of typing long flags every time:
 ```powershell
 ./scripts/run-android.cmd
 ```
+
+`run-web.cmd` is the single web run command. Graphic mini maps on web are
+enabled automatically when API/key setup allows them.
 
 If you prefer PowerShell scripts, run once with bypass:
 

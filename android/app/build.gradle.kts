@@ -33,8 +33,15 @@ android {
 
         // One-key workflow: read from Gradle property / env var / local .env.json.
         val envJsonKey = run {
-            val envFile = rootProject.file(".env.json")
-            if (!envFile.exists()) {
+            val candidates = listOf(
+                // Android root (android/.env.json)
+                rootProject.file(".env.json"),
+                // Workspace root (../.env.json)
+                rootProject.file("../.env.json"),
+            )
+
+            val envFile = candidates.firstOrNull { it.exists() }
+            if (envFile == null) {
                 null
             } else {
                 val parsed = JsonSlurper().parseText(envFile.readText()) as? Map<*, *>
