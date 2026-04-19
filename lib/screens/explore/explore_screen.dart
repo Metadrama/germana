@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
-import 'package:germana/data/mock_rides.dart';
+import 'package:germana/data/mock_rides_peninsular.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/ride_card.dart';
 import 'package:germana/widgets/section_label.dart';
 import 'package:germana/screens/explore/ride_detail_screen.dart';
 import 'package:germana/screens/explore/places_search_screen.dart';
 import 'package:germana/services/location_service.dart';
+import 'package:germana/services/ride_discovery_service.dart';
 import 'package:intl/intl.dart';
 
 /// Main discovery feed — AFA-inspired card layout.
@@ -20,23 +22,33 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  String _selectedFilter = 'Semua';
-  final _filters = ['Semua', 'Sekarang', 'Dijadual', '< RM5', '3+ Tempat'];
-  
+  String _selectedFilter = 'all';
   PlaceDetails? _searchDestination;
 
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
     final state = AppStateProvider.of(context);
-    final topDestinations = mockRides.take(5).toList();
+    final l10n = AppLocalizations.of(context);
+    final discovery = RideDiscoveryService.discover(
+      rides: mockRidesPeninsular,
+      selectedFilter: _selectedFilter,
+      currentLocationLat: state.currentLocationLat,
+      currentLocationLng: state.currentLocationLng,
+      selectedLocation: _searchDestination,
+    );
+    final feedRides = discovery.rides;
+    final hasSearchContext = _searchDestination != null;
     final now = DateTime.now();
-    final greeting = now.hour < 12
-        ? 'Selamat pagi'
-        : now.hour < 17
-            ? 'Selamat petang'
-            : 'Selamat malam';
-    final dateStr = DateFormat('EEE d MMM').format(now);
+    final greeting = l10n.greetingForHour(now.hour);
+    final dateStr = DateFormat('EEE d MMM', l10n.languageCode).format(now);
+    final filters = [
+      (id: 'all', label: l10n.allFilter),
+      (id: 'now', label: l10n.nowFilter),
+      (id: 'scheduled', label: l10n.scheduledFilter),
+      (id: 'under5', label: l10n.underFiveFilter),
+      (id: 'seats3', label: l10n.threePlusSeatsFilter),
+    ];
 
     return SafeArea(
       bottom: false,
@@ -59,38 +71,61 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   const SizedBox(height: 20),
 
                   // Location
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.glassSurface,
-                      borderRadius: BorderRadius.circular(AppRadius.chip),
-                      border: Border.all(color: colors.glassBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.my_location_rounded,
-                          size: 16,
-                          color: colors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            state.currentLocationLabel,
-                            style: AppTextStyles.captionBold(context),
-                            overflow: TextOverflow.ellipsis,
+                  GestureDetector(
+                    onTap: () async {
+                      final result = await Navigator.of(context).push<PlaceDetails>(
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => PlacesSearchScreen(
+                            hint: 'Set current area',
+                            initialValue: state.currentLocationLabel,
                           ),
+                          transitionsBuilder: (_, animation, __, child) {
+                            return FadeTransition(opacity: animation, child: child);
+                          },
                         ),
-                        Text(
-                          'Manual',
-                          style: AppTextStyles.caption(context).copyWith(
-                            color: AppColors.accentBlue,
+                      );
+
+                      if (result != null) {
+                        state.setCurrentLocation(
+                          label: result.name,
+                          lat: result.lat,
+                          lng: result.lng,
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.glassSurface,
+                        borderRadius: BorderRadius.circular(AppRadius.chip),
+                        border: Border.all(color: colors.glassBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.my_location_rounded,
+                            size: 16,
+                            color: colors.textSecondary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              state.currentLocationLabel,
+                              style: AppTextStyles.captionBold(context),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            'Manual',
+                            style: AppTextStyles.caption(context).copyWith(
+                              color: AppColors.accentBlue,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -102,7 +137,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       final result = await Navigator.of(context).push<PlaceDetails>(
                         PageRouteBuilder(
                           pageBuilder: (_, __, ___) => PlacesSearchScreen(
-                            hint: 'Ke mana?',
+                            hint: l10n.searchHint,
                             initialValue: _searchDestination?.name,
                           ),
                           transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
@@ -112,7 +147,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     },
                     child: AbsorbPointer(
                       child: GlassTextField(
-                        hint: 'Ke mana?',
+                        hint: l10n.searchHint,
                         prefixIcon: Icons.search_rounded,
                         controller: TextEditingController(text: _searchDestination?.name),
                         readOnly: true,
@@ -127,14 +162,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     height: 36,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemCount: _filters.length,
+                      itemCount: filters.length,
                       separatorBuilder: (_, __) => const SizedBox(width: 8),
                       itemBuilder: (context, index) {
-                        final filter = _filters[index];
-                        final isSelected = filter == _selectedFilter;
+                        final filter = filters[index];
+                        final isSelected = filter.id == _selectedFilter;
                         return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedFilter = filter),
+                          onTap: () => setState(() => _selectedFilter = filter.id),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(
@@ -155,7 +189,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               ),
                             ),
                             child: Text(
-                              filter,
+                              filter.label,
                               style: AppTextStyles.caption(context).copyWith(
                                 color: isSelected
                                     ? Colors.white
@@ -170,68 +204,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
 
                   const SizedBox(height: 20),
-
-                  const SectionLabel(label: 'Destinations'),
                   const SizedBox(height: 8),
 
-                  SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: topDestinations.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final ride = topDestinations[index];
-                        final sex = ride.driverSex == DriverSex.female
-                            ? 'Perempuan'
-                            : 'Lelaki';
-
-                        return Container(
-                          width: 220,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colors.glassSurface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: colors.glassBorder),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ride.destination,
-                                style: AppTextStyles.captionBold(context)
-                                    .copyWith(fontSize: 13),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '${ride.distanceKm.toStringAsFixed(1)} km · RM ${ride.totalPrice.toStringAsFixed(2)}',
-                                style: AppTextStyles.caption(context),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${ride.seatsLeft} seats · ${ride.carModel}',
-                                style: AppTextStyles.caption(context),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Sex: $sex',
-                                style: AppTextStyles.caption(context),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
                   SectionLabel(
-                    label: 'Perjalanan tersedia',
-                    trailing: 'Lihat semua',
+                    label: hasSearchContext
+                        ? 'Rides to ${_searchDestination!.name}'
+                        : l10n.availableRides,
+                    trailing: '${feedRides.length} found',
                   ),
+                  if (hasSearchContext)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        discovery.appliedRadiusKm != null
+                            ? 'From around ${state.currentLocationLabel} • destination within ~${discovery.appliedRadiusKm!.toStringAsFixed(0)} km'
+                            : 'From around ${state.currentLocationLabel}',
+                        style: AppTextStyles.caption(context),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -243,7 +233,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final ride = mockRides[index];
+                  final item = feedRides[index];
+                  final ride = item.ride;
                   return TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.0, end: 1.0),
                     duration: Duration(milliseconds: 400 + (index * 80)),
@@ -259,6 +250,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     },
                     child: RideCard(
                       ride: ride,
+                      distanceFromSearchKm: item.distanceFromSearchKm,
                       onTap: () {
                         Navigator.of(context).push(
                           PageRouteBuilder(
@@ -280,10 +272,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     ),
                   );
                 },
-                childCount: mockRides.length,
+                childCount: feedRides.length,
               ),
             ),
           ),
+
+          if (feedRides.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: GlassTextField(
+                  hint: hasSearchContext
+                      ? 'No matching routes from your current area to that destination yet.'
+                      : 'No rides match current filters.',
+                  readOnly: true,
+                  prefixIcon: Icons.info_outline_rounded,
+                ),
+              ),
+            ),
 
           // Bottom padding for floating nav
           const SliverToBoxAdapter(

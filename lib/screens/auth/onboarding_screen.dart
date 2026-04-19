@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/pill_button.dart';
 
@@ -37,6 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppStateProvider.of(context);
+    final l10n = AppLocalizations.of(context);
 
     if (_nameCtrl.text.isEmpty) {
       _nameCtrl.text = state.name;
@@ -44,60 +46,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _sex = state.sex;
     }
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-        children: [
-          Text('Complete Profile', style: AppTextStyles.display(context)),
-          const SizedBox(height: 8),
-          Text(
-            'Setkan driver info asas sebelum masuk ke Home.',
-            style: AppTextStyles.bodySecondary(context),
-          ),
-          const SizedBox(height: 24),
-          Text('Nama', style: AppTextStyles.caption(context)),
-          const SizedBox(height: 8),
-          GlassTextField(
-            hint: 'Nama penuh',
-            controller: _nameCtrl,
-          ),
-          const SizedBox(height: 16),
-          Text('Telefon', style: AppTextStyles.caption(context)),
-          const SizedBox(height: 8),
-          GlassTextField(
-            hint: '+60 1X-XXXX XXXX',
-            controller: _phoneCtrl,
-            prefixIcon: Icons.phone_outlined,
-          ),
-          const SizedBox(height: 16),
-          Text('Jantina', style: AppTextStyles.caption(context)),
-          const SizedBox(height: 8),
-          SegmentedButton<PersonSex>(
-            segments: const [
-              ButtonSegment<PersonSex>(
-                value: PersonSex.male,
-                label: Text('Lelaki'),
-                icon: Icon(Icons.male_rounded),
-              ),
-              ButtonSegment<PersonSex>(
-                value: PersonSex.female,
-                label: Text('Perempuan'),
-                icon: Icon(Icons.female_rounded),
-              ),
-            ],
-            selected: <PersonSex>{_sex},
-            onSelectionChanged: (selection) {
-              setState(() => _sex = selection.first);
-            },
-          ),
-          const SizedBox(height: 28),
-          PillButton(
-            label: 'Enter Home',
-            icon: Icons.check_rounded,
-            expand: true,
-            onPressed: _complete,
-          ),
-        ],
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          children: [
+            Text(l10n.onboardingTitle, style: AppTextStyles.display(context)),
+            const SizedBox(height: 8),
+            Text(l10n.onboardingSubtitle, style: AppTextStyles.bodySecondary(context)),
+            const SizedBox(height: 24),
+            Text(l10n.nameLabel, style: AppTextStyles.caption(context)),
+            const SizedBox(height: 8),
+            GlassTextField(
+              hint: l10n.nameHint,
+              controller: _nameCtrl,
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.phoneLabel, style: AppTextStyles.caption(context)),
+            const SizedBox(height: 8),
+            GlassTextField(
+              hint: l10n.phoneHint,
+              controller: _phoneCtrl,
+              prefixIcon: Icons.phone_outlined,
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.genderLabel, style: AppTextStyles.caption(context)),
+            const SizedBox(height: 8),
+            SegmentedButton<PersonSex>(
+              segments: [
+                ButtonSegment<PersonSex>(
+                  value: PersonSex.male,
+                  label: Text(l10n.maleButton),
+                  icon: Icon(Icons.male_rounded),
+                ),
+                ButtonSegment<PersonSex>(
+                  value: PersonSex.female,
+                  label: Text(l10n.femaleButton),
+                  icon: Icon(Icons.female_rounded),
+                ),
+              ],
+              selected: <PersonSex>{_sex},
+              onSelectionChanged: (selection) {
+                setState(() => _sex = selection.first);
+              },
+            ),
+            const SizedBox(height: 28),
+            PillButton(
+              label: l10n.enterHome,
+              icon: Icons.check_rounded,
+              expand: true,
+              onPressed: _complete,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/screens/explore/explore_screen.dart';
 import 'package:germana/screens/ledger/ledger_screen.dart';
 import 'package:germana/screens/profile/profile_screen.dart';
@@ -23,14 +24,27 @@ class _AppShellState extends State<AppShell> {
     ProfileScreen(),
   ];
 
-  final _navItems = const [
-    _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Rides'),
-    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long_rounded, label: 'History'),
-    _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final navItems = [
+      _NavItem(
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
+        label: l10n.navRides,
+      ),
+      _NavItem(
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long_rounded,
+        label: l10n.navHistory,
+      ),
+      _NavItem(
+        icon: Icons.person_outline_rounded,
+        activeIcon: Icons.person_rounded,
+        label: l10n.navProfile,
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -43,14 +57,14 @@ class _AppShellState extends State<AppShell> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: _buildNavBar(context),
+            child: _buildNavBar(context, navItems),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildNavBar(BuildContext context) {
+  Widget _buildNavBar(BuildContext context, List<_NavItem> navItems) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final colors = GermanaColors.of(context);
 
@@ -81,8 +95,8 @@ class _AppShellState extends State<AppShell> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(_navItems.length, (index) {
-                final item = _navItems[index];
+              children: List.generate(navItems.length, (index) {
+                final item = navItems[index];
                 final isActive = index == _currentIndex;
 
                 return GestureDetector(

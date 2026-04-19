@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/screens/explore/booking_confirmed_screen.dart';
 
@@ -39,6 +40,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -61,7 +63,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Text('Pembayaran', style: AppTextStyles.headline(context)),
+                  Text(l10n.paymentTitle, style: AppTextStyles.headline(context)),
                   const Spacer(),
                   const SizedBox(width: 48),
                 ],
@@ -69,12 +71,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
 
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Jumlah', style: AppTextStyles.bodySecondary(context)),
+                    Text(l10n.amount, style: AppTextStyles.bodySecondary(context)),
                     const SizedBox(height: 8),
                     Text(
                       'RM ${widget.ride.totalPrice.toStringAsFixed(2)}',
@@ -85,17 +86,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       '${widget.ride.origin} → ${widget.ride.destination}',
                       style: AppTextStyles.caption(context),
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
 
                     const SizedBox(height: 40),
 
-                    Text('Bayar dengan', style: AppTextStyles.headline(context)),
+                    Text(l10n.payWith, style: AppTextStyles.headline(context)),
                     const SizedBox(height: 16),
 
                     // Touch 'n Go eWallet
                     _PaymentMethodCard(
                       label: "Touch 'n Go eWallet",
-                      subtitle: 'Bayaran segera',
+                      subtitle: l10n.instantPayment,
                       icon: Icons.account_balance_wallet_rounded,
                       iconColor: AppColors.tngBlue,
                       isSelected: _selectedMethod == 0,
@@ -106,7 +109,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     // DuitNow
                     _PaymentMethodCard(
                       label: 'DuitNow QR',
-                      subtitle: 'Pindahan segera',
+                      subtitle: l10n.instantPayment,
                       icon: Icons.qr_code_rounded,
                       isSelected: _selectedMethod == 1,
                       onTap: () => setState(() => _selectedMethod = 1),
@@ -116,7 +119,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     // FPX
                     _PaymentMethodCard(
                       label: 'FPX',
-                      subtitle: 'Perbankan atas talian',
+                      subtitle: l10n.bankTransfer,
                       icon: Icons.account_balance_rounded,
                       isSelected: _selectedMethod == 2,
                       onTap: () => setState(() => _selectedMethod = 2),
@@ -132,20 +135,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
-                          _feeRow(context, 'Sumbangan minyak',
+                            _feeRow(context, l10n.fuelContribution,
                               widget.ride.fuelShare),
                           const SizedBox(height: 6),
-                          _feeRow(context, 'Bahagian tol',
+                            _feeRow(context, l10n.tollShare,
                               widget.ride.tollShare),
                           const SizedBox(height: 6),
-                          _feeRow(context, 'Yuran platform',
+                            _feeRow(context, l10n.platformFee,
                               widget.ride.platformFee),
                           Divider(height: 16, color: colors.divider),
-                          _feeRow(context, 'Jumlah',
+                            _feeRow(context, l10n.total,
                               widget.ride.totalPrice, isBold: true),
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
@@ -172,7 +177,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ),
                       )
                     : PillButton(
-                        label: 'Sahkan & Bayar',
+                        label: l10n.confirmPayment,
                         icon: Icons.lock_rounded,
                         expand: true,
                         onPressed: _confirmPayment,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/section_label.dart';
 import 'package:germana/screens/driver/list_ride_screen.dart';
@@ -16,6 +17,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppStateProvider.of(context);
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return SafeArea(
       bottom: false,
@@ -25,7 +27,7 @@ class ProfileScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Driver Info', style: AppTextStyles.display(context)),
+              Text(l10n.driverInfo, style: AppTextStyles.display(context)),
               // Edit button
               IconButton(
                 onPressed: () {
@@ -89,7 +91,7 @@ class ProfileScreen extends StatelessWidget {
                     style: AppTextStyles.caption(context)),
                 const SizedBox(height: 6),
                 Text(
-                  state.sex == PersonSex.female ? 'Perempuan' : 'Lelaki',
+                  state.sex == PersonSex.female ? l10n.femaleLabel : l10n.maleLabel,
                   style: AppTextStyles.captionBold(context),
                 ),
                 const SizedBox(height: 6),
@@ -136,21 +138,21 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 _StatColumn(
                   value: '${state.totalRides}',
-                  label: 'Perjalanan',
+                  label: l10n.trips,
                   context: context,
                 ),
                 Container(width: 1, height: 32,
                     color: colors.glassBorder),
                 _StatColumn(
                   value: '${state.rating}★',
-                  label: 'Penilaian',
+                  label: l10n.rating,
                   context: context,
                 ),
                 Container(width: 1, height: 32,
                     color: colors.glassBorder),
                 _StatColumn(
                   value: '${state.ridesAsDriver}',
-                  label: 'Pemandu',
+                  label: l10n.driver,
                   context: context,
                 ),
               ],
@@ -160,7 +162,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Car profile
-          const SectionLabel(label: 'Kereta anda'),
+          SectionLabel(label: l10n.yourCar),
           GestureDetector(
             onTap: () {
               Navigator.of(context).push(
@@ -208,7 +210,7 @@ class ProfileScreen extends StatelessWidget {
 
           // List a Ride CTA
           PillButton(
-            label: 'Senarai Perjalanan',
+            label: l10n.listRide,
             icon: Icons.add_rounded,
             expand: true,
             onPressed: () {
@@ -223,7 +225,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Settings
-          const SectionLabel(label: 'Tetapan'),
+          SectionLabel(label: l10n.settings),
           GlassBox(
             opacity: 0.35,
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -234,18 +236,20 @@ class ProfileScreen extends StatelessWidget {
                 Divider(height: 1, color: colors.divider),
                 _SettingsRow(
                   icon: Icons.notifications_outlined,
-                  label: 'Notifikasi',
+                  label: l10n.notifications,
                 ),
                 Divider(height: 1, color: colors.divider),
                 _SettingsRow(
                   icon: Icons.shield_outlined,
-                  label: 'Privasi & Keselamatan',
+                  label: l10n.privacySafety,
                 ),
                 Divider(height: 1, color: colors.divider),
                 _SettingsRow(
                   icon: Icons.help_outline_rounded,
-                  label: 'Bantuan & Sokongan',
+                  label: l10n.helpSupport,
                 ),
+                Divider(height: 1, color: colors.divider),
+                _LanguageSettingsRow(),
               ],
             ),
           ),
@@ -283,6 +287,7 @@ class _ThemeToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppStateProvider.of(context);
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return ListTile(
       leading: Icon(
@@ -290,7 +295,7 @@ class _ThemeToggleRow extends StatelessWidget {
         size: 20,
         color: colors.textSecondary,
       ),
-      title: Text('Mod Gelap',
+        title: Text(l10n.darkMode,
           style: AppTextStyles.body(context).copyWith(fontSize: 15)),
       trailing: Switch.adaptive(
         value: state.themeMode == ThemeMode.dark ||
@@ -320,6 +325,62 @@ class _SettingsRow extends StatelessWidget {
           style: AppTextStyles.body(context).copyWith(fontSize: 15)),
       trailing: Icon(Icons.chevron_right_rounded,
           color: colors.textTertiary, size: 20),
+      dense: true,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _LanguageSettingsRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    final l10n = AppLocalizations.of(context);
+    final colors = GermanaColors.of(context);
+
+    final options = <Locale, String>{
+      const Locale('en'): l10n.languageEnglish,
+      const Locale('ms'): l10n.languageMalay,
+      const Locale('zh'): l10n.languageChinese,
+      const Locale('ta'): l10n.languageTamil,
+    };
+
+    final currentLocale = options.keys.firstWhere(
+      (locale) => locale.languageCode == state.locale.languageCode,
+      orElse: () => const Locale('en'),
+    );
+
+    return ListTile(
+      leading: Icon(Icons.language_rounded, size: 20, color: colors.textSecondary),
+      title: Text(l10n.language,
+          style: AppTextStyles.body(context).copyWith(fontSize: 15)),
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 140),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: DropdownButton<Locale>(
+            isDense: true,
+            value: currentLocale,
+            underline: const SizedBox(),
+            items: options.entries
+                .map(
+                  (entry) => DropdownMenuItem<Locale>(
+                    value: entry.key,
+                    child: Text(
+                      entry.value,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (locale) {
+              if (locale != null) {
+                state.setLocale(locale);
+              }
+            },
+          ),
+        ),
+      ),
       dense: true,
       visualDensity: VisualDensity.compact,
     );

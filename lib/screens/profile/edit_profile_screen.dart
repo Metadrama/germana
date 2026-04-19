@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
+import 'package:germana/l10n/app_localizations.dart';
 
 import 'package:germana/widgets/pill_button.dart';
 
@@ -72,6 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -92,7 +94,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Text('Sunting Profil',
+                    Text(l10n.editProfile,
                       style: AppTextStyles.headline(context)),
                   const Spacer(),
                   const SizedBox(width: 48),
@@ -106,35 +108,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Nama', style: AppTextStyles.caption(context)),
+                    Text(l10n.nameLabel, style: AppTextStyles.caption(context)),
                     const SizedBox(height: 8),
-                    _GlassInput(controller: _nameCtrl, hint: 'Nama penuh'),
+                    _GlassInput(controller: _nameCtrl, hint: l10n.nameHint),
 
                     const SizedBox(height: 20),
 
-                    Text('E-mel Institusi',
+                    Text(l10n.institutionEmail,
                         style: AppTextStyles.caption(context)),
                     const SizedBox(height: 8),
                     _GlassInput(
                       controller: _emailCtrl,
-                      hint: 'nama@smail.unikl.edu.my',
+                      hint: l10n.signInHint,
                       keyboardType: TextInputType.emailAddress,
                     ),
 
                     const SizedBox(height: 20),
 
-                    Text('No. Telefon',
+                    Text(l10n.phoneLabel,
                         style: AppTextStyles.caption(context)),
                     const SizedBox(height: 8),
                     _GlassInput(
                       controller: _phoneCtrl,
-                      hint: '+60 11-XXXX XXXX',
+                      hint: l10n.phoneHint,
                       keyboardType: TextInputType.phone,
                     ),
 
                     const SizedBox(height: 20),
 
-                    Text('Fakulti', style: AppTextStyles.caption(context)),
+                    Text(l10n.faculty, style: AppTextStyles.caption(context)),
                     const SizedBox(height: 8),
                     GlassBox(
                       borderRadius: AppRadius.pill,
@@ -166,7 +168,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: PillButton(
-                label: 'Simpan',
+                label: l10n.save,
                 icon: Icons.check_rounded,
                 expand: true,
                 onPressed: _save,

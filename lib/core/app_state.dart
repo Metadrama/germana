@@ -26,7 +26,10 @@ class AppState extends ChangeNotifier {
   static const _kCarColor = 'car_color';
   static const _kCarFuelConsumption = 'car_fuel_consumption';
   static const _kCurrentLocationLabel = 'current_location_label';
+  static const _kCurrentLocationLat = 'current_location_lat';
+  static const _kCurrentLocationLng = 'current_location_lng';
   static const _kUserRole = 'user_role';
+  static const _kLocaleCode = 'locale_code';
 
   // --- Auth & onboarding ---
   bool _isAuthenticated = false;
@@ -49,6 +52,13 @@ class AppState extends ChangeNotifier {
 
   String _currentLocationLabel = 'UniKL MIIT, Gombak';
   String get currentLocationLabel => _currentLocationLabel;
+  double _currentLocationLat = 3.2078;
+  double get currentLocationLat => _currentLocationLat;
+  double _currentLocationLng = 101.7282;
+  double get currentLocationLng => _currentLocationLng;
+
+  Locale _locale = const Locale('en');
+  Locale get locale => _locale;
 
   // --- Theme ---
   ThemeMode _themeMode = ThemeMode.system;
@@ -160,6 +170,24 @@ class AppState extends ChangeNotifier {
     _persist();
   }
 
+  void setCurrentLocation({
+    required String label,
+    required double lat,
+    required double lng,
+  }) {
+    _currentLocationLabel = label;
+    _currentLocationLat = lat;
+    _currentLocationLng = lng;
+    notifyListeners();
+    _persist();
+  }
+
+  void setLocale(Locale locale) {
+    _locale = Locale(locale.languageCode);
+    notifyListeners();
+    _persist();
+  }
+
   // --- Mutators ---
   void updateProfile({
     String? name,
@@ -224,7 +252,12 @@ class AppState extends ChangeNotifier {
 
     _currentLocationLabel =
         prefs.getString(_kCurrentLocationLabel) ?? _currentLocationLabel;
+    _currentLocationLat =
+      prefs.getDouble(_kCurrentLocationLat) ?? _currentLocationLat;
+    _currentLocationLng =
+      prefs.getDouble(_kCurrentLocationLng) ?? _currentLocationLng;
     _userRole = _roleFromString(prefs.getString(_kUserRole));
+    _locale = Locale(prefs.getString(_kLocaleCode) ?? _locale.languageCode);
 
     _isHydrated = true;
     notifyListeners();
@@ -252,7 +285,10 @@ class AppState extends ChangeNotifier {
     await prefs.setDouble(_kCarFuelConsumption, _carFuelConsumption);
 
     await prefs.setString(_kCurrentLocationLabel, _currentLocationLabel);
+    await prefs.setDouble(_kCurrentLocationLat, _currentLocationLat);
+    await prefs.setDouble(_kCurrentLocationLng, _currentLocationLng);
     await prefs.setString(_kUserRole, _userRole.name);
+    await prefs.setString(_kLocaleCode, _locale.languageCode);
   }
 
   ThemeMode _themeModeFromString(String? value) {

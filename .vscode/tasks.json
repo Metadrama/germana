@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Web (env file)",
+      "type": "shell",
+      "command": "scripts/run-web.cmd",
+      "group": "build"
+    },
+    {
+      "label": "Run Android (env file)",
+      "type": "shell",
+      "command": "scripts/run-android.cmd",
+      "group": "build"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/data/mock_my_rides.dart';
 import 'package:germana/models/ride_model.dart';
 import 'package:germana/widgets/pill_button.dart';
@@ -14,6 +15,7 @@ class MyRidesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final upcoming =
         mockMyRides.where((r) => r.departureTime.isAfter(DateTime.now())).toList();
     final past =
@@ -24,17 +26,17 @@ class MyRidesScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         children: [
-          Text('Perjalanan Saya', style: AppTextStyles.display(context)),
+          Text(l10n.myRidesTitle, style: AppTextStyles.display(context)),
           const SizedBox(height: 20),
 
           if (upcoming.isNotEmpty) ...[
-            const SectionLabel(label: 'Akan datang'),
+            SectionLabel(label: l10n.upcoming),
             ...upcoming.map((ride) => _UpcomingRideCard(ride: ride)),
             const SizedBox(height: 24),
           ],
 
           if (past.isNotEmpty) ...[
-            const SectionLabel(label: 'Lepas'),
+            SectionLabel(label: l10n.past),
             ...past.map((ride) => _PastRideCard(ride: ride)),
           ],
 
@@ -48,10 +50,10 @@ class MyRidesScreen extends StatelessWidget {
                         size: 64,
                         color: GermanaColors.of(context).textTertiary),
                     const SizedBox(height: 16),
-                    Text('Tiada perjalanan lagi',
+                    Text(l10n.noRidesYet,
                         style: AppTextStyles.title(context)),
                     const SizedBox(height: 8),
-                    Text('Terokai perjalanan tersedia untuk bermula',
+                    Text(l10n.exploreRidesToStart,
                         style: AppTextStyles.bodySecondary(context)),
                   ],
                 ),
@@ -70,6 +72,7 @@ class _UpcomingRideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
     final diff = ride.departureTime.difference(DateTime.now());
     final timeStr = diff.inMinutes < 60
         ? '${diff.inMinutes} min'
@@ -146,7 +149,7 @@ class _UpcomingRideCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(ride.driverName ?? 'Tidak diketahui',
+                        Text(ride.driverName ?? l10n.unknownDriver,
                           style: AppTextStyles.headline(context)
                               .copyWith(fontSize: 15)),
                       Row(
@@ -173,7 +176,7 @@ class _UpcomingRideCard extends StatelessWidget {
                   size: 14, color: colors.textTertiary),
               const SizedBox(width: 4),
               Text(
-                'Bertolak dalam $timeStr',
+                l10n.arrivingIn(timeStr),
                 style: AppTextStyles.caption(context).copyWith(
                   color: AppColors.accentBlue,
                   fontWeight: FontWeight.w600,
@@ -181,7 +184,7 @@ class _UpcomingRideCard extends StatelessWidget {
               ),
               const Spacer(),
               PillButton(
-                label: 'Dah Sampai',
+                label: l10n.arrived,
                 color: AppColors.accentGreen,
                 isSmall: true,
                 onPressed: () {},

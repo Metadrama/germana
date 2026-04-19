@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/data/mock_ledger.dart';
 import 'package:germana/models/ride_model.dart';
 import 'package:germana/widgets/section_label.dart';
@@ -12,6 +13,7 @@ class LedgerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final totalSpent = mockLedger
         .where((e) => e.amount < 0)
         .fold(0.0, (sum, e) => sum + e.amount.abs());
@@ -24,7 +26,7 @@ class LedgerScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         children: [
-          Text('History', style: AppTextStyles.display(context)),
+          Text(l10n.historyTitle, style: AppTextStyles.display(context)),
           const SizedBox(height: 20),
 
           // Summary hero card
@@ -33,7 +35,7 @@ class LedgerScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Bulan ini', style: AppTextStyles.caption(context)),
+                Text(l10n.thisMonth, style: AppTextStyles.caption(context)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -41,7 +43,7 @@ class LedgerScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Jumlah belanja',
+                            Text(l10n.totalSpent,
                               style: AppTextStyles.bodySecondary(context)),
                           Text(
                             'RM ${totalSpent.toStringAsFixed(2)}',
@@ -61,7 +63,7 @@ class LedgerScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Dikembalikan',
+                            Text(l10n.refunded,
                                 style: AppTextStyles.bodySecondary(context)),
                             Text(
                               'RM ${totalRefunded.toStringAsFixed(2)}',
@@ -81,7 +83,7 @@ class LedgerScreen extends StatelessWidget {
           ),
 
           const SizedBox(height: 24),
-          const SectionLabel(label: 'Receipts'),
+          SectionLabel(label: l10n.receipts),
 
           ...mockLedger.map((entry) => _TransactionTile(entry: entry)),
         ],
@@ -94,7 +96,7 @@ class _TransactionTile extends StatelessWidget {
   final LedgerEntry entry;
   const _TransactionTile({required this.entry});
 
-  Color get _indicatorColor {
+  Color _indicatorColor() {
     switch (entry.type) {
       case TransactionType.escrowHold:
         return AppColors.escrowBlue;
@@ -107,21 +109,22 @@ class _TransactionTile extends StatelessWidget {
     }
   }
 
-  String get _typeLabel {
+  String _typeLabel(AppLocalizations l10n) {
     switch (entry.type) {
       case TransactionType.escrowHold:
-        return 'Simpanan Escrow';
+        return l10n.escrowHold;
       case TransactionType.platformFee:
-        return 'Yuran Platform';
+        return l10n.platformFee;
       case TransactionType.releasedToDriver:
-        return 'Dikeluarkan';
+        return l10n.releasedToDriver;
       case TransactionType.refund:
-        return 'Bayaran Balik';
+        return l10n.refund;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isPositive = entry.amount > 0;
 
     return GlassBox(
@@ -133,7 +136,7 @@ class _TransactionTile extends StatelessWidget {
           Container(
             width: 4, height: 36,
             decoration: BoxDecoration(
-              color: _indicatorColor,
+              color: _indicatorColor(),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -144,7 +147,7 @@ class _TransactionTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(_typeLabel,
+                    Text(_typeLabel(l10n),
                         style: AppTextStyles.captionBold(context)
                             .copyWith(fontSize: 13)),
                     const Spacer(),
@@ -167,7 +170,7 @@ class _TransactionTile extends StatelessWidget {
                           style: AppTextStyles.caption(context)),
                       Text(' · ', style: AppTextStyles.caption(context)),
                     ],
-                    Text(_formatDate(entry.date),
+                    Text(_formatDate(l10n, entry.date),
                         style: AppTextStyles.caption(context)),
                   ],
                 ),
@@ -179,11 +182,11 @@ class _TransactionTile extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
+  String _formatDate(AppLocalizations l10n, DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inHours < 24) return 'Hari ini ${DateFormat('HH:mm').format(dt)}';
-    if (diff.inDays < 7) return '${diff.inDays} hari lepas';
-    return DateFormat('d MMM').format(dt);
+    if (diff.inHours < 24) return '${l10n.today} ${DateFormat('HH:mm', l10n.languageCode).format(dt)}';
+    if (diff.inDays < 7) return l10n.daysAgo(diff.inDays);
+    return DateFormat('d MMM', l10n.languageCode).format(dt);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/screens/explore/places_search_screen.dart';
@@ -65,6 +66,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
     final state = AppStateProvider.of(context);
+    final l10n = AppLocalizations.of(context);
     final cars = _getCars(state);
 
     return Scaffold(
@@ -85,7 +87,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Text('Senarai Perjalanan',
+                  Text(l10n.listRideScreenTitle,
                       style: AppTextStyles.headline(context)),
                   const Spacer(),
                   const SizedBox(width: 48),
@@ -104,7 +106,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: PillButton(
-                  label: 'Senaraikan',
+                  label: l10n.listButton,
                   icon: Icons.check_rounded,
                   expand: true,
                   onPressed: () => setState(() => _listed = true),
@@ -117,6 +119,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
   }
 
   Widget _buildForm(BuildContext context, List<Map<String, dynamic>> cars) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -125,7 +128,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
             final result = await Navigator.of(context).push<PlaceDetails>(
               PageRouteBuilder(
                 pageBuilder: (_, __, ___) => PlacesSearchScreen(
-                  hint: 'Dari mana?',
+                  hint: l10n.fromWhereHint,
                   initialValue: _origin?.name,
                 ),
                 transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
@@ -138,7 +141,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
           },
           child: AbsorbPointer(
             child: GlassTextField(
-              hint: 'Dari...',
+              hint: l10n.fromFieldHint,
               prefixIcon: Icons.trip_origin_rounded,
               controller: TextEditingController(text: _origin?.name),
               readOnly: true,
@@ -151,7 +154,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
             final result = await Navigator.of(context).push<PlaceDetails>(
               PageRouteBuilder(
                 pageBuilder: (_, __, ___) => PlacesSearchScreen(
-                  hint: 'Ke mana?',
+                  hint: l10n.toWhereHint,
                   initialValue: _destination?.name,
                 ),
                 transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
@@ -164,7 +167,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
           },
           child: AbsorbPointer(
             child: GlassTextField(
-              hint: 'Ke...',
+              hint: l10n.toFieldHint,
               prefixIcon: Icons.location_on_outlined,
               controller: TextEditingController(text: _destination?.name),
               readOnly: true,
@@ -174,7 +177,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
 
         const SizedBox(height: 28),
 
-        Text('Kereta anda', style: AppTextStyles.headline(context)),
+        Text(l10n.yourCarLabel, style: AppTextStyles.headline(context)),
         const SizedBox(height: 12),
         SizedBox(
           height: 80,
@@ -232,7 +235,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
                   const Icon(Icons.calculate_outlined,
                       size: 18, color: AppColors.accentBlue),
                   const SizedBox(width: 8),
-                  Text('Kadar Saksama',
+                  Text(l10n.fairRateLabel,
                       style: AppTextStyles.headline(context)),
                   const Spacer(),
                   if (_isCalculatingRoute)
@@ -248,19 +251,19 @@ class _ListRideScreenState extends State<ListRideScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              _calcRow(context, 'Sumbangan minyak (RON95)',
+              _calcRow(context, l10n.fuelContributionRon,
                   'RM ${_fuelRate(cars).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _calcRow(context, 'Bahagian tol',
+              _calcRow(context, l10n.tollShareLabel,
                   'RM ${_tollRate.toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _calcRow(context, 'Tempat', '4'),
+              _calcRow(context, l10n.seatsLabel, '4'),
               Divider(height: 20,
                   color: GermanaColors.of(context).divider),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Cadangan /tempat',
+                  Text(l10n.recommendedPerSeatLabel,
                       style: AppTextStyles.headline(context)
                           .copyWith(fontSize: 15)),
                   Text(
@@ -272,7 +275,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Boleh minta sehingga +15% (RM ${(_perSeat(cars) * 1.15).toStringAsFixed(2)})',
+                '${l10n.priceRangeHint} (RM ${(_perSeat(cars) * 1.15).toStringAsFixed(2)})',
                 style: AppTextStyles.caption(context).copyWith(
                   color: GermanaColors.of(context).textTertiary,
                 ),
@@ -285,6 +288,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
   }
 
   Widget _buildSuccess(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -300,16 +304,16 @@ class _ListRideScreenState extends State<ListRideScreen> {
                 size: 40, color: AppColors.accentGreen),
           ),
           const SizedBox(height: 20),
-          Text('Disenaraikan!', style: AppTextStyles.title(context)),
+          Text(l10n.listedSuccessTitle, style: AppTextStyles.title(context)),
           const SizedBox(height: 8),
           Text(
-            'Perjalanan anda kini boleh dilihat oleh penumpang',
+            l10n.listedSuccessMessage,
             style: AppTextStyles.bodySecondary(context),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
           PillButton(
-            label: 'Kembali',
+            label: l10n.backLabel,
             isOutlined: true,
             onPressed: () => Navigator.of(context).pop(),
           ),

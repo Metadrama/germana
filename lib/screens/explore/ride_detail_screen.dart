@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/price_breakdown_row.dart';
 import 'package:germana/widgets/status_badge.dart';
@@ -23,13 +25,14 @@ class RideDetailScreen extends StatelessWidget {
     return 'Bertolak ${DateFormat('EEE, h:mm a').format(dt)}';
   }
 
-  String _sexLabel() {
-    return ride.driverSex == DriverSex.female ? 'Perempuan' : 'Lelaki';
+  String _sexLabel(AppLocalizations l10n) {
+    return ride.driverSex == DriverSex.female ? l10n.sexFemale : l10n.sexMale;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
 
     // Default map location (Kuala Lumpur) since we don't have exact lat/lng in mock
     const initialCamera = CameraPosition(
@@ -41,17 +44,30 @@ class RideDetailScreen extends StatelessWidget {
       backgroundColor: colors.background,
       body: Stack(
         children: [
-          // Background Liquid Map
+          // On web, avoid hard crashing when JS Maps SDK is not yet available.
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: initialCamera,
-              zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
-              mapToolbarEnabled: false,
-              style: Theme.of(context).brightness == Brightness.dark
-                  ? AppMapStyles.darkMapStyle
-                  : AppMapStyles.lightMapStyle,
-            ),
+            child: kIsWeb
+                ? DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colors.background,
+                          colors.background.withValues(alpha: 0.92),
+                        ],
+                      ),
+                    ),
+                  )
+                : GoogleMap(
+                    initialCameraPosition: initialCamera,
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    mapToolbarEnabled: false,
+                    style: Theme.of(context).brightness == Brightness.dark
+                        ? AppMapStyles.darkMapStyle
+                        : AppMapStyles.lightMapStyle,
+                  ),
           ),
           
           SafeArea(
@@ -71,7 +87,7 @@ class RideDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Text('Butiran Perjalanan', style: AppTextStyles.headline(context)),
+                  Text(l10n.rideDetailsTitle, style: AppTextStyles.headline(context)),
                   const Spacer(),
                   const SizedBox(width: 48),
                 ],
@@ -175,11 +191,11 @@ class RideDetailScreen extends StatelessWidget {
                                     const Icon(Icons.verified_rounded,
                                         size: 14, color: AppColors.accentBlue),
                                     const SizedBox(width: 4),
-                                    Text('Identiti disahkan',
+                                    Text(l10n.verifiedIdentity,
                                         style: AppTextStyles.caption(context)
                                             .copyWith(color: AppColors.accentBlue)),
                                     const SizedBox(width: 8),
-                                    Text('· ${_sexLabel()}',
+                                    Text('· ${_sexLabel(l10n)}',
                                         style: AppTextStyles.caption(context)),
                                   ],
                                 ),
@@ -201,31 +217,31 @@ class RideDetailScreen extends StatelessWidget {
                         children: [
                           _DetailRow(
                             icon: Icons.pin_drop_outlined,
-                            label: 'Pickup (gathering point)',
+                            label: l10n.pickupLabel,
                             value: ride.pickupAddress,
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.straighten_rounded,
-                            label: 'Distance',
+                            label: l10n.distanceLabel,
                             value: '${ride.distanceKm.toStringAsFixed(1)} km',
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.directions_car_rounded,
-                            label: 'Kereta',
+                            label: l10n.yourCar,
                             value: ride.carModel,
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.schedule_rounded,
-                            label: 'Bertolak',
+                            label: l10n.departIn,
                             value: _formatDeparture(ride.departureTime),
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.event_seat_rounded,
-                            label: 'Tempat kosong',
+                            label: l10n.seats,
                             value: '${ride.seatsLeft} dari ${ride.totalSeats}',
                             trailing: StatusBadge.seats(ride.seatsLeft),
                           ),
@@ -240,7 +256,7 @@ class RideDetailScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Gambar kereta', style: AppTextStyles.caption(context)),
+                            Text(l10n.carImage, style: AppTextStyles.caption(context)),
                             const SizedBox(height: 8),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(14),
@@ -264,7 +280,7 @@ class RideDetailScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Harga setiap tempat',
+                            Text(l10n.pricePerSeat,
                               style: AppTextStyles.caption(context)),
                           const SizedBox(height: 4),
                           Text(
@@ -282,43 +298,41 @@ class RideDetailScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 100),
-                  ],
-                ),
-              ),
-            ),
+                    const SizedBox(height: 16),
 
-            // Bottom CTA
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: PillButton(
-                  label: 'Proceed Payment  ·  RM ${ride.totalPrice.toStringAsFixed(2)}',
-                  expand: true,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        transitionDuration: const Duration(milliseconds: 350),
-                        reverseTransitionDuration:
-                            const Duration(milliseconds: 300),
-                        pageBuilder: (_, __, ___) =>
-                            PaymentScreen(ride: ride),
-                        transitionsBuilder: (_, animation, __, child) {
-                          return SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 1),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            )),
-                            child: child,
+                    SizedBox(
+                      width: double.infinity,
+                      child: PillButton(
+                        label: '${l10n.confirmPayment}  ·  RM ${ride.totalPrice.toStringAsFixed(2)}',
+                        expand: true,
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            PageRouteBuilder(
+                              transitionDuration: const Duration(milliseconds: 350),
+                              reverseTransitionDuration:
+                                  const Duration(milliseconds: 300),
+                              pageBuilder: (_, __, ___) =>
+                                  PaymentScreen(ride: ride),
+                              transitionsBuilder: (_, animation, __, child) {
+                                return SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 1),
+                                    end: Offset.zero,
+                                  ).animate(CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeOutCubic,
+                                  )),
+                                  child: child,
+                                );
+                              },
+                            ),
                           );
                         },
                       ),
-                    );
-                  },
+                    ),
+
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
@@ -358,11 +372,24 @@ class _DetailRow extends StatelessWidget {
               Text(label, style: AppTextStyles.caption(context)),
               const SizedBox(height: 2),
               Text(value,
-                  style: AppTextStyles.body(context).copyWith(fontSize: 15)),
+                  style: AppTextStyles.body(context).copyWith(fontSize: 15),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
-        if (trailing != null) trailing!,
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: trailing!,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

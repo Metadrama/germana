@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:germana/app_shell.dart';
 import 'package:germana/core/app_state.dart';
@@ -15,6 +16,7 @@ class RootFlow extends StatefulWidget {
 
 class _RootFlowState extends State<RootFlow> {
   bool _startedHydration = false;
+  bool _appliedMockPermissions = false;
 
   @override
   void didChangeDependencies() {
@@ -28,6 +30,22 @@ class _RootFlowState extends State<RootFlow> {
   @override
   Widget build(BuildContext context) {
     final state = AppStateProvider.of(context);
+
+    if (kIsWeb &&
+      state.isHydrated &&
+      state.isAuthenticated &&
+      state.isProfileComplete &&
+      !state.hasRequiredPermissions) {
+      if (!_appliedMockPermissions) {
+        _appliedMockPermissions = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          state.setPermissions(location: true, notifications: true);
+        });
+      }
+
+      return const Center(child: CircularProgressIndicator());
+    }
 
     if (!state.isHydrated) {
       return const Center(child: CircularProgressIndicator());

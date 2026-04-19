@@ -4,6 +4,7 @@ import 'package:germana/core/app_state.dart';
 import 'package:germana/core/ambient_background.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/root_flow.dart';
+import 'package:germana/l10n/app_localizations.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,9 @@ class GermanaApp extends StatelessWidget {
             theme: buildGermanaLightTheme(),
             darkTheme: buildGermanaDarkTheme(),
             themeMode: _appState.themeMode,
+            locale: _appState.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             home: const AmbientBackground(child: RootFlow()),
           );
         },

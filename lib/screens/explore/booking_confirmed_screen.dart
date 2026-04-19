@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 
 /// Booking confirmed — driver identity reveal with blur → sharp animation.
@@ -65,6 +66,7 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -91,7 +93,7 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
 
               const SizedBox(height: 24),
 
-              Text('Tempat Dijamin!', style: AppTextStyles.display(context)),
+              Text(l10n.securedTitle, style: AppTextStyles.display(context)),
               const SizedBox(height: 8),
               Text(
                 '${widget.ride.origin} → ${widget.ride.destination}',
@@ -123,7 +125,7 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Text('Pemandu anda',
+                        Text(l10n.yourDriver,
                           style: AppTextStyles.caption(context)),
                       const SizedBox(height: 12),
 
@@ -134,17 +136,17 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
                           color: AppColors.accentBlue.withValues(alpha: 0.1),
                         ),
                         child: Center(
-                          child: Text('AF',
+                            child: Text('AF',
                               style: AppTextStyles.title(context)
                                   .copyWith(color: AppColors.accentBlue)),
                         ),
                       ),
 
                       const SizedBox(height: 12),
-                      Text('Ahmad Faris',
+                        Text('Ahmad Faris',
                           style: AppTextStyles.title(context)),
                       const SizedBox(height: 4),
-                      Text('Perodua Myvi · Putih',
+                        Text('Perodua Myvi · Putih',
                           style: AppTextStyles.bodySecondary(context)),
                       const SizedBox(height: 4),
 
@@ -169,7 +171,7 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           PillButton(
-                            label: 'Chat',
+                            label: l10n.chatDriver,
                             icon: Icons.chat_bubble_outline_rounded,
                             isSmall: true,
                             isOutlined: true,
@@ -177,7 +179,7 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
                           ),
                           const SizedBox(width: 12),
                           PillButton(
-                            label: 'Telefon',
+                            label: l10n.callDriver,
                             icon: Icons.phone_outlined,
                             isSmall: true,
                             isOutlined: true,
@@ -195,7 +197,7 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
               SizedBox(
                 width: double.infinity,
                 child: PillButton(
-                  label: 'Lihat Perjalanan',
+                  label: l10n.viewRide,
                   expand: true,
                   onPressed: () {
                     Navigator.of(context)

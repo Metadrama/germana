@@ -5,7 +5,11 @@ class RideModel {
   final String id;
   final String origin;
   final String destination;
+  final double? destinationLat;
+  final double? destinationLng;
   final String pickupAddress;
+  final double? pickupLat;
+  final double? pickupLng;
   final double distanceKm;
   final String driverAlias;
   final DriverSex driverSex;
@@ -26,7 +30,11 @@ class RideModel {
     required this.id,
     required this.origin,
     required this.destination,
+    this.destinationLat,
+    this.destinationLng,
     String? pickupAddress,
+    this.pickupLat,
+    this.pickupLng,
     this.distanceKm = 0,
     required this.driverAlias,
     this.driverSex = DriverSex.male,
@@ -55,7 +63,11 @@ class RideModel {
       id: id,
       origin: origin,
       destination: destination,
+      destinationLat: destinationLat,
+      destinationLng: destinationLng,
       pickupAddress: pickupAddress,
+      pickupLat: pickupLat,
+      pickupLng: pickupLng,
       distanceKm: distanceKm,
       driverAlias: driverAlias,
       driverSex: driverSex,

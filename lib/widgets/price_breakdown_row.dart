@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/l10n/app_localizations.dart';
 
 /// Expandable price breakdown row — fuel / toll / platform fee splits.
 class PriceBreakdownRow extends StatefulWidget {
@@ -57,6 +58,7 @@ class _PriceBreakdownRowState extends State<PriceBreakdownRow>
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +74,7 @@ class _PriceBreakdownRowState extends State<PriceBreakdownRow>
               ),
               const SizedBox(width: 4),
               Text(
-                'Pecahan harga',
+                l10n.priceBreakdownTitle,
                 style: AppTextStyles.caption(context).copyWith(
                   color: colors.textTertiary,
                 ),
@@ -97,11 +99,11 @@ class _PriceBreakdownRowState extends State<PriceBreakdownRow>
               padding: const EdgeInsets.only(top: 8),
               child: Column(
                 children: [
-                  _line(context, 'Sumbangan minyak', widget.fuelShare),
+                  _line(context, l10n.fuelShareLabel, widget.fuelShare),
                   const SizedBox(height: 4),
-                  _line(context, 'Bahagian tol', widget.tollShare),
+                  _line(context, l10n.tollShareLabel, widget.tollShare),
                   const SizedBox(height: 4),
-                  _line(context, 'Yuran platform', widget.platformFee),
+                  _line(context, l10n.platformFeeLabel, widget.platformFee),
                 ],
               ),
             ),

@@ -26,6 +26,7 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
   
   List<PlaceSuggestion> _suggestions = [];
   bool _isLoading = false;
+  bool _placesApiUnavailable = false;
   Timer? _debounce;
 
   @override
@@ -62,6 +63,7 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
       if (mounted) {
         setState(() {
           _suggestions = results;
+          _placesApiUnavailable = _locationService.isPlacesApiDisabled;
           _isLoading = false;
         });
       }
@@ -92,17 +94,71 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final hasQuery = _searchCtrl.text.trim().isNotEmpty;
+    final showEmptyState = !_isLoading && !_placesApiUnavailable && hasQuery && _suggestions.isEmpty;
+
+    final maxSuggestionsHeight = MediaQuery.of(context).size.height * 0.56;
+    final showSuggestionsList =
+      !_placesApiUnavailable && !showEmptyState && _suggestions.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.background,
       body: Stack(
         children: [
-          // Background blur
+          // Layered atmospheric background to avoid flat gray appearance.
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    colors.background,
+                    colors.backgroundElevated,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: -120,
+            right: -80,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.accentBlue.withValues(alpha: 0.18),
+                    AppColors.accentBlue.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 180,
+            left: -120,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.accentSky.withValues(alpha: 0.12),
+                    AppColors.accentSky.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
-                color: colors.background.withValues(alpha: 0.7),
+                color: colors.background.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -119,7 +175,12 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
                         style: IconButton.styleFrom(
-                          backgroundColor: colors.glassSurface,
+                          backgroundColor: colors.backgroundElevated.withValues(alpha: 0.95),
+                          foregroundColor: colors.textPrimary,
+                          side: BorderSide(
+                            color: colors.glassBorderSubtle,
+                            width: 1,
+                          ),
                           shape: const CircleBorder(),
                         ),
                       ),
@@ -127,7 +188,7 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
                       Expanded(
                         child: GlassBox(
                           borderRadius: AppRadius.pill,
-                          padding: EdgeInsets.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
                           child: TextField(
                             controller: _searchCtrl,
                             focusNode: _focusNode,
@@ -157,14 +218,31 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
                     ],
                   ),
                 ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        hasQuery ? 'Suggestions' : 'Start typing to search places',
+                        style: AppTextStyles.caption(context).copyWith(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 
                 // Loading indicator
                 if (_isLoading)
                   Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                     child: SizedBox(
-                      height: 2,
+                      height: 3,
                       child: LinearProgressIndicator(
+                        borderRadius: BorderRadius.circular(99),
                         backgroundColor: colors.glassBorder,
                         valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
                       ),
@@ -172,41 +250,145 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
                   ),
 
                 // Results List
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    itemCount: _suggestions.length,
-                    separatorBuilder: (context, index) => Divider(
-                      color: colors.divider,
-                      height: 1,
-                    ),
-                    itemBuilder: (context, index) {
-                      final req = _suggestions[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: colors.glassSurface,
-                            shape: BoxShape.circle,
+                if (_placesApiUnavailable)
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: GlassBox(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.key_off_rounded,
+                                color: colors.textSecondary,
+                                size: 26,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Places search is temporarily unavailable (API key expired). Enter location manually or renew the API key.',
+                                style: AppTextStyles.bodySecondary(context),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
-                          child: Icon(Icons.location_on_rounded, color: colors.textSecondary, size: 18),
                         ),
-                        title: Text(
-                          req.mainText,
-                          style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  )
+                else if (showEmptyState)
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: GlassBox(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.travel_explore_rounded,
+                                color: colors.textSecondary,
+                                size: 28,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'No matches found. Try a more specific road, area, or city.',
+                                style: AppTextStyles.bodySecondary(context),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
-                        subtitle: req.secondaryText.isNotEmpty ? Text(
-                          req.secondaryText,
-                          style: AppTextStyles.caption(context),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ) : null,
-                        onTap: () => _selectPlace(req),
-                      );
-                    },
-                  ),
-                ),
+                      ),
+                    ),
+                  )
+                else if (showSuggestionsList)
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: maxSuggestionsHeight),
+                        child: GlassBox(
+                          padding: EdgeInsets.zero,
+                          borderRadius: 18,
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: _suggestions.length,
+                            separatorBuilder: (context, index) => Divider(
+                              color: colors.divider,
+                              height: 1,
+                              indent: 56,
+                              endIndent: 12,
+                            ),
+                            itemBuilder: (context, index) {
+                              final req = _suggestions[index];
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _selectPlace(req),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(9),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accentBlue.withValues(alpha: 0.10),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.location_on_rounded,
+                                            color: AppColors.accentBlue,
+                                            size: 17,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                req.mainText,
+                                                style: AppTextStyles.body(context).copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              if (req.secondaryText.isNotEmpty) ...[
+                                                const SizedBox(height: 3),
+                                                Text(
+                                                  req.secondaryText,
+                                                  style: AppTextStyles.caption(context),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 19,
+                                          color: colors.textTertiary,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
               ],
             ),
           ),

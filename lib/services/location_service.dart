@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:germana/core/config.dart';
@@ -58,6 +59,7 @@ class RouteDetails {
 class LocationService {
   final _uuid = const Uuid();
   String _sessionToken = '';
+  static bool _placesApiDisabled = false;
 
   // Initialize/refresh session token
   void refreshSessionToken() {
@@ -71,9 +73,16 @@ class LocationService {
     return _sessionToken;
   }
 
+  bool get isPlacesApiDisabled => _placesApiDisabled;
+
   /// Get autocomplete suggestions limited to Malaysia (New Places API).
   Future<List<PlaceSuggestion>> getSuggestions(String query) async {
     if (query.trim().isEmpty) return [];
+    if (_placesApiDisabled) return [];
+    if (AppConfig.googleMapsApiKey.isEmpty) {
+      _placesApiDisabled = true;
+      return [];
+    }
 
     final url = Uri.parse('https://places.googleapis.com/v1/places:autocomplete');
     final body = json.encode({
@@ -99,16 +108,27 @@ class LocationService {
               .toList();
         }
       } else {
-        print('Places API Status not 200: ${response.statusCode} - ${response.body}');
+        if (response.statusCode == 400 &&
+            (response.body.contains('API_KEY_INVALID') ||
+                response.body.contains('API key expired'))) {
+          _placesApiDisabled = true;
+          return [];
+        }
+        debugPrint('Places API Status not 200: ${response.statusCode}');
       }
     } catch (e) {
-      print('LocationService Exception: $e');
+      debugPrint('LocationService Exception: $e');
     }
     return [];
   }
 
   /// Get place details (specifically coordinates) from a place ID.
   Future<PlaceDetails?> getPlaceDetails(String placeId) async {
+    if (_placesApiDisabled) return null;
+    if (AppConfig.googleMapsApiKey.isEmpty) {
+      _placesApiDisabled = true;
+      return null;
+    }
     final url = Uri.parse('https://places.googleapis.com/v1/places/$placeId');
 
     try {
@@ -134,16 +154,23 @@ class LocationService {
           address: data['formattedAddress'] ?? '',
         );
       } else {
-        print('Place Details Fetch Error: \${response.statusCode} - \${response.body}');
+        if (response.statusCode == 400 &&
+            (response.body.contains('API_KEY_INVALID') ||
+                response.body.contains('API key expired'))) {
+          _placesApiDisabled = true;
+          return null;
+        }
+        debugPrint('Place Details Fetch Error: ${response.statusCode}');
       }
     } catch (e) {
-      // Handle error
+      debugPrint('Place Details Exception: $e');
     }
     return null;
   }
 
   /// Get routing information between two points.
   Future<RouteDetails?> getDirections(PlaceDetails origin, PlaceDetails destination) async {
+    if (AppConfig.googleMapsApiKey.isEmpty) return null;
     final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/directions/json'
         '?origin=${origin.lat},${origin.lng}'

@@ -4,6 +4,7 @@ import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/data/car_database.dart';
+import 'package:germana/l10n/app_localizations.dart';
 
 import 'package:germana/widgets/pill_button.dart';
 
@@ -19,13 +20,11 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
   String _selectedBrand = 'Perodua';
   CarModel? _selectedModel;
   late TextEditingController _plateCtrl;
-  String _selectedColor = 'Putih';
+  String _selectedColor = 'colorWhite';
   String _searchQuery = '';
 
-  final _colors = [
-    'Putih', 'Hitam', 'Perak', 'Kelabu', 'Merah',
-    'Biru', 'Coklat', 'Emas', 'Hijau', 'Oren',
-  ];
+  late List<String> _colorKeys;
+  late Map<String, String> _colorMap;
 
   @override
   void initState() {
@@ -36,10 +35,33 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final l10n = AppLocalizations.of(context);
+    
+    _colorKeys = [
+      'colorWhite', 'colorBlack', 'colorSilver', 'colorGrey', 'colorRed',
+      'colorBlue', 'colorBrown', 'colorGold', 'colorGreen', 'colorOrange',
+    ];
+    
+    _colorMap = {
+      'colorWhite': l10n.colorWhite,
+      'colorBlack': l10n.colorBlack,
+      'colorSilver': l10n.colorSilver,
+      'colorGrey': l10n.colorGrey,
+      'colorRed': l10n.colorRed,
+      'colorBlue': l10n.colorBlue,
+      'colorBrown': l10n.colorBrown,
+      'colorGold': l10n.colorGold,
+      'colorGreen': l10n.colorGreen,
+      'colorOrange': l10n.colorOrange,
+    };
+    
     final state = AppStateProvider.of(context);
     if (_plateCtrl.text.isEmpty && _selectedModel == null) {
       _plateCtrl.text = state.carPlate;
-      _selectedColor = state.carColor;
+      // Map saved color name to color key
+      final savedColor = state.carColor;
+      _selectedColor = _mapColorToKey(savedColor, l10n);
+      
       // Try to find current car in database
       final match = malaysiaCarDatabase.where(
         (c) => c.displayName.toLowerCase() == state.carModel.toLowerCase(),
@@ -49,6 +71,21 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
         _selectedBrand = match.first.brand;
       }
     }
+  }
+
+  String _mapColorToKey(String colorName, AppLocalizations l10n) {
+    // Try to find matching color key
+    for (final key in _colorKeys) {
+      if (_colorMap[key] == colorName) {
+        return key;
+      }
+    }
+    // Fallback to white if no match
+    return 'colorWhite';
+  }
+
+  String _mapKeyToColor(String colorKey, AppLocalizations l10n) {
+    return _colorMap[colorKey] ?? l10n.colorWhite;
   }
 
   @override
@@ -67,10 +104,13 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
   void _save() {
     if (_selectedModel == null) return;
     final state = AppStateProvider.of(context);
+    final l10n = AppLocalizations.of(context);
+    // Convert color key back to display name for storage
+    final colorDisplay = _mapKeyToColor(_selectedColor, l10n);
     state.updateCar(
       model: _selectedModel!.displayName,
       plate: _plateCtrl.text.trim().toUpperCase(),
-      color: _selectedColor,
+      color: colorDisplay,
       fuelConsumption: _selectedModel!.fuelConsumption,
     );
     Navigator.of(context).pop();
@@ -91,24 +131,25 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
     }
   }
 
-  String _bodyTypeLabel(BodyType type) {
+  String _bodyTypeLabel(AppLocalizations l10n, BodyType type) {
     switch (type) {
       case BodyType.sedan:
-        return 'Sedan';
+        return l10n.sedan;
       case BodyType.hatchback:
-        return 'Hatchback';
+        return l10n.hatchback;
       case BodyType.suv:
-        return 'SUV';
+        return l10n.suv;
       case BodyType.mpv:
-        return 'MPV';
+        return l10n.mpv;
       case BodyType.pickup:
-        return 'Pickup';
+        return l10n.pickup;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
+    final l10n = AppLocalizations.of(context);
     final models = _filteredModels;
 
     return Scaffold(
@@ -130,7 +171,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Text('Pilih Kereta', style: AppTextStyles.headline(context)),
+                  Text(l10n.chooseCar, style: AppTextStyles.headline(context)),
                   const Spacer(),
                   const SizedBox(width: 48),
                 ],
@@ -145,6 +186,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                       child: _SearchBar(
+                        hintText: l10n.searchHint,
                         onChanged: (q) => setState(() {
                           _searchQuery = q;
                         }),
@@ -212,9 +254,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
                       child: Text(
-                        _searchQuery.isNotEmpty
-                            ? '${models.length} model dijumpai'
-                            : '${models.length} model',
+                        l10n.modelsFound(models.length),
                         style: AppTextStyles.caption(context),
                       ),
                     ),
@@ -281,7 +321,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                                           Row(
                                             children: [
                                               Text(
-                                                _bodyTypeLabel(car.bodyType),
+                                                _bodyTypeLabel(l10n, car.bodyType),
                                                 style: AppTextStyles.caption(
                                                     context),
                                               ),
@@ -301,7 +341,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                                                         AppTextStyles.caption(
                                                             context)),
                                                 Text(
-                                                  'Dihentikan',
+                                                  l10n.discontinued,
                                                   style: AppTextStyles.caption(
                                                           context)
                                                       .copyWith(
@@ -395,26 +435,26 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                                   Divider(height: 24, color: colors.divider),
 
                                   // Plate number
-                                  Text('No. Pendaftaran',
+                                  Text(l10n.plateLabel,
                                       style: AppTextStyles.caption(context)),
                                   const SizedBox(height: 8),
-                                  _PlateInput(controller: _plateCtrl),
+                                  _PlateInput(controller: _plateCtrl, hintText: l10n.plateHintExample),
 
                                   const SizedBox(height: 16),
 
                                   // Color
-                                  Text('Warna',
+                                  Text(l10n.colorLabel,
                                       style: AppTextStyles.caption(context)),
                                   const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 8,
                                     runSpacing: 8,
-                                    children: _colors.map((color) {
+                                    children: _colorKeys.map((colorKey) {
                                       final isActive =
-                                          color == _selectedColor;
+                                          colorKey == _selectedColor;
                                       return GestureDetector(
                                         onTap: () => setState(
-                                            () => _selectedColor = color),
+                                            () => _selectedColor = colorKey),
                                         child: AnimatedContainer(
                                           duration: const Duration(
                                               milliseconds: 200),
@@ -436,7 +476,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                                             ),
                                           ),
                                           child: Text(
-                                            color,
+                                            _colorMap[colorKey] ?? colorKey,
                                             style: AppTextStyles.caption(
                                                     context)
                                                 .copyWith(
@@ -469,7 +509,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: PillButton(
-                  label: 'Simpan Kereta',
+                  label: l10n.saveCar,
                   icon: Icons.check_rounded,
                   expand: true,
                   onPressed: _save,
@@ -485,7 +525,8 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
 /// Search bar with glass backdrop — filters across all brands.
 class _SearchBar extends StatelessWidget {
   final ValueChanged<String> onChanged;
-  const _SearchBar({required this.onChanged});
+  final String hintText;
+  const _SearchBar({required this.hintText, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -504,7 +545,7 @@ class _SearchBar extends StatelessWidget {
             onChanged: onChanged,
             style: AppTextStyles.body(context),
             decoration: InputDecoration(
-              hintText: 'Cari kereta...',
+              hintText: hintText,
               hintStyle: AppTextStyles.bodySecondary(context),
               prefixIcon: Icon(Icons.search_rounded,
                   color: colors.textSecondary, size: 20),
@@ -522,7 +563,8 @@ class _SearchBar extends StatelessWidget {
 /// Malaysian-style plate number input (uppercase, formatted).
 class _PlateInput extends StatelessWidget {
   final TextEditingController controller;
-  const _PlateInput({required this.controller});
+  final String hintText;
+  const _PlateInput({required this.controller, required this.hintText});
 
   @override
   Widget build(BuildContext context) {
@@ -538,7 +580,7 @@ class _PlateInput extends StatelessWidget {
           fontSize: 18,
         ),
         decoration: InputDecoration(
-          hintText: 'cth. WXY 1234',
+          hintText: hintText,
           hintStyle: AppTextStyles.bodySecondary(context).copyWith(
             letterSpacing: 2.0,
           ),

@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -28,6 +30,24 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // One-key workflow: read from Gradle property / env var / local .env.json.
+        val envJsonKey = run {
+            val envFile = rootProject.file(".env.json")
+            if (!envFile.exists()) {
+                null
+            } else {
+                val parsed = JsonSlurper().parseText(envFile.readText()) as? Map<*, *>
+                parsed?.get("GOOGLE_MAPS_API_KEY")?.toString()
+            }
+        }
+
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] =
+            listOf(
+                project.findProperty("GOOGLE_MAPS_API_KEY") as String?,
+                System.getenv("GOOGLE_MAPS_API_KEY"),
+                envJsonKey,
+            ).firstOrNull { !it.isNullOrBlank() } ?: ""
     }
 
     buildTypes {
