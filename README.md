@@ -63,6 +63,9 @@ The app automatically attempts web map snapshots when possible.
 If Google returns an image error (for example 403 due to key restrictions),
 the app automatically falls back to the route preview card for that run.
 
+For in-app Street View on Android/iOS (WebView-based), ensure **Maps Embed API**
+is also enabled for the same key.
+
 Also note: browser builds do not call the Directions HTTP endpoint directly
 (CORS blocked). The app uses a local route estimate on web for distance/time.
 

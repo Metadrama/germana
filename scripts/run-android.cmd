@@ -1,3 +1,16 @@
 @echo off
 cd /d "%~dp0.."
-flutter run -d android --dart-define-from-file=.env.json
+setlocal
+
+set "DEVICE_ID="
+for /f "tokens=1" %%i in ('adb devices ^| findstr /R /C:"device$"') do (
+	if not defined DEVICE_ID set "DEVICE_ID=%%i"
+)
+
+if "%DEVICE_ID%"=="" (
+	echo No Android device detected. Connect a phone or start an emulator, then retry.
+	exit /b 1
+)
+
+echo Running on Android device: %DEVICE_ID%
+flutter run -d %DEVICE_ID% --dart-define-from-file=.env.json

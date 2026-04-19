@@ -7,7 +7,9 @@ import 'package:germana/core/config.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/map_styles.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/screens/explore/street_view_screen.dart';
 import 'package:germana/services/location_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RideMapSnippet extends StatefulWidget {
   final String pickupLabel;
@@ -148,12 +150,22 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
         markerId: const MarkerId('pickup'),
         position: LatLng(widget.pickupLat!, widget.pickupLng!),
         infoWindow: InfoWindow(title: widget.pickupLabel),
+        onTap: () => _showPointActions(
+          label: widget.pickupLabel,
+          lat: widget.pickupLat!,
+          lng: widget.pickupLng!,
+        ),
       ),
       Marker(
         markerId: const MarkerId('destination'),
         position: LatLng(widget.destinationLat!, widget.destinationLng!),
         infoWindow: InfoWindow(title: widget.destinationLabel),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        onTap: () => _showPointActions(
+          label: widget.destinationLabel,
+          lat: widget.destinationLat!,
+          lng: widget.destinationLng!,
+        ),
       ),
     };
 
@@ -242,6 +254,11 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
                         context,
                         icon: Icons.trip_origin_rounded,
                         text: widget.pickupLabel,
+                        onTap: () => _showPointActions(
+                          label: widget.pickupLabel,
+                          lat: widget.pickupLat!,
+                          lng: widget.pickupLng!,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -250,6 +267,11 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
                         context,
                         icon: Icons.flag_rounded,
                         text: widget.destinationLabel,
+                        onTap: () => _showPointActions(
+                          label: widget.destinationLabel,
+                          lat: widget.destinationLat!,
+                          lng: widget.destinationLng!,
+                        ),
                       ),
                     ),
                   ],
@@ -385,6 +407,11 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
                         context,
                         icon: Icons.trip_origin_rounded,
                         text: widget.pickupLabel,
+                        onTap: () => _showPointActions(
+                          label: widget.pickupLabel,
+                          lat: widget.pickupLat!,
+                          lng: widget.pickupLng!,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -393,6 +420,11 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
                         context,
                         icon: Icons.flag_rounded,
                         text: widget.destinationLabel,
+                        onTap: () => _showPointActions(
+                          label: widget.destinationLabel,
+                          lat: widget.destinationLat!,
+                          lng: widget.destinationLng!,
+                        ),
                       ),
                     ),
                   ],
@@ -575,31 +607,134 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
     BuildContext context, {
     required IconData icon,
     required String text,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.35),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 12, color: Colors.white),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 12, color: Colors.white),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption(context).copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
+    );
+  }
+
+  Future<void> _showPointActions({
+    required String label,
+    required double lat,
+    required double lng,
+  }) async {
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final colors = GermanaColors.of(context);
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: GlassBox(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: AppTextStyles.headline(context)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose map action',
+                    style: AppTextStyles.caption(context),
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    leading: const Icon(Icons.streetview_rounded),
+                    title: const Text('Street View'),
+                    trailing: Icon(Icons.open_in_new_rounded, color: colors.textTertiary),
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      await _openStreetView(label: label, lat: lat, lng: lng);
+                    },
+                  ),
+                  ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    leading: const Icon(Icons.map_rounded),
+                    title: const Text('Open in Maps'),
+                    trailing: Icon(Icons.open_in_new_rounded, color: colors.textTertiary),
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      await _openMaps(lat: lat, lng: lng);
+                    },
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Future<void> _openStreetView({
+    required String label,
+    required double lat,
+    required double lng,
+  }) async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => StreetViewScreen(
+            label: label,
+            lat: lat,
+            lng: lng,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final webUri = Uri.parse(
+      'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=$lat,$lng',
+    );
+    await launchUrl(webUri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openMaps({required double lat, required double lng}) async {
+    final appUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng');
+    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+
+    final launched = await launchUrl(appUri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    }
   }
 
   List<LatLng> _decodePolyline(String encoded) {
