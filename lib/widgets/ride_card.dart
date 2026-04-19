@@ -28,6 +28,39 @@ class RideCard extends StatefulWidget {
 }
 
 class _RideCardState extends State<RideCard> {
+  Color _driverAvatarBackground() {
+    // Deterministic palette choice keeps each driver visually consistent.
+    final seed = widget.ride.driverDisplayName.toLowerCase().trim();
+    final index = seed.isEmpty ? 0 : seed.hashCode.abs();
+
+    if (widget.ride.driverSex == DriverSex.female) {
+      const femalePalette = <Color>[
+        Color(0xFFF6D9E7),
+        Color(0xFFEEDCFA),
+        Color(0xFFFFDDE2),
+        Color(0xFFEAD6F8),
+        Color(0xFFF9DCEB),
+      ];
+      return femalePalette[index % femalePalette.length];
+    }
+
+    const malePalette = <Color>[
+      Color(0xFFD7E9FF),
+      Color(0xFFDDEEFF),
+      Color(0xFFCFE5FF),
+      Color(0xFFE1EEFF),
+      Color(0xFFD8EFFF),
+    ];
+    return malePalette[index % malePalette.length];
+  }
+
+  Color _driverAvatarTextColor() {
+    if (widget.ride.driverSex == DriverSex.female) {
+      return const Color(0xFF6B3566);
+    }
+    return const Color(0xFF2C4F7A);
+  }
+
   String _formatTime(DateTime dt) {
     final diff = dt.difference(DateTime.now());
     if (diff.isNegative) return 'Departed';
@@ -73,7 +106,7 @@ class _RideCardState extends State<RideCard> {
             builder: (context, constraints) {
               if (constraints.maxWidth < 140) {
                 return Text(
-                  '${widget.ride.origin} -> ${widget.ride.destination}',
+                  widget.ride.driverDisplayName,
                   style: AppTextStyles.caption(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -91,7 +124,7 @@ class _RideCardState extends State<RideCard> {
                         builder: (context, constraints) {
                           if (constraints.maxWidth < 120) {
                             return Text(
-                              '${widget.ride.origin} -> ${widget.ride.destination}',
+                              widget.ride.driverDisplayName,
                               style: AppTextStyles.headline(context),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
@@ -101,17 +134,25 @@ class _RideCardState extends State<RideCard> {
                           return Row(
                             children: [
                               Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: AppColors.accentBlue,
+                                  color: _driverAvatarBackground(),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  widget.ride.driverInitials,
+                                  style: AppTextStyles.captionBold(context).copyWith(
+                                    color: _driverAvatarTextColor(),
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  '${widget.ride.origin} -> ${widget.ride.destination}',
+                                  widget.ride.driverDisplayName,
                                   style: AppTextStyles.headline(context),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
@@ -127,9 +168,7 @@ class _RideCardState extends State<RideCard> {
                       padding: const EdgeInsets.only(top: 1),
                       child: StatusBadge.seats(
                         widget.ride.seatsLeft,
-                        label: widget.ride.seatsLeft == 1
-                            ? '1 seat'
-                            : '${widget.ride.seatsLeft} seats',
+                        label: '${widget.ride.seatsLeft}/${widget.ride.totalSeats} left',
                       ),
                     ),
                   ],
@@ -209,12 +248,21 @@ class _RideCardState extends State<RideCard> {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            l10n.perSeatPriceLabel,
+                            l10n.fairRateLabel,
                             style: AppTextStyles.caption(context),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
+                    );
+
+                    final individualRateInfo = Text(
+                      'Individual now: RM ${widget.ride.currentIndividualRate.toStringAsFixed(2)} each (${widget.ride.activeRiders}/${widget.ride.totalSeats} onboard)',
+                      style: AppTextStyles.caption(context).copyWith(
+                        color: colors.textSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     );
 
                     final cta = PillButton(
@@ -228,6 +276,8 @@ class _RideCardState extends State<RideCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           priceInfo,
+                          const SizedBox(height: 3),
+                          individualRateInfo,
                           const SizedBox(height: 8),
                           Align(alignment: Alignment.centerRight, child: cta),
                         ],
@@ -237,7 +287,16 @@ class _RideCardState extends State<RideCard> {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(child: priceInfo),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              priceInfo,
+                              const SizedBox(height: 3),
+                              individualRateInfo,
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         cta,
                       ],
@@ -285,8 +344,12 @@ class _RideCardState extends State<RideCard> {
   }
 
   Widget _routeTimeline(BuildContext context) {
+    final colors = GermanaColors.of(context);
     final endTime = _timeLabel(_estimatedArrival());
     final startTime = _timeLabel(widget.ride.departureTime);
+    final endDotColor = colors.isDark
+        ? AppColors.routeEndNeutralDark
+        : AppColors.routeEndNeutralLight;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
@@ -303,24 +366,22 @@ class _RideCardState extends State<RideCard> {
                     Container(
                       width: 10,
                       height: 10,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.accentBlue,
+                        color: AppColors.routeStartBlue,
+                        border: Border.all(
+                          color: colors.isDark
+                              ? Colors.white.withValues(alpha: 0.42)
+                              : Colors.white.withValues(alpha: 0.72),
+                          width: 0.8,
+                        ),
                       ),
                     ),
                     Container(
-                      width: 2,
+                      width: 1,
                       height: 32,
-                      margin: const EdgeInsets.symmetric(vertical: 3),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.accentBlue.withValues(alpha: 0.78),
-                            AppColors.accentGreen.withValues(alpha: 0.45),
-                          ],
-                        ),
+                        color: colors.textTertiary.withValues(alpha: 0.55),
                       ),
                     ),
                     Container(
@@ -328,8 +389,8 @@ class _RideCardState extends State<RideCard> {
                       height: 10,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.accentGreen.withValues(alpha: 0.12),
-                        border: Border.all(color: AppColors.accentGreen, width: 2.2),
+                        color: endDotColor.withValues(alpha: 0.16),
+                        border: Border.all(color: endDotColor, width: 2.2),
                       ),
                     ),
                   ],
@@ -407,11 +468,9 @@ class _RideCardState extends State<RideCard> {
         Text(
           timeText,
           style: AppTextStyles.captionBold(context).copyWith(
-            color: emphasize
-                ? AppColors.accentBlue
-                : colors.isDark
-                    ? colors.textSecondary.withValues(alpha: 0.9)
-                    : colors.textSecondary,
+            color: colors.isDark
+                ? colors.textSecondary.withValues(alpha: 0.9)
+                : colors.textSecondary,
           ),
         ),
       ],

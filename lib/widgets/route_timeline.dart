@@ -58,6 +58,9 @@ class RouteTimelineCard extends StatelessWidget {
     final colors = GermanaColors.of(context);
     final startTime = _timeLabel(departureTime);
     final endTime = _timeLabel(_estimatedArrival());
+    final endDotColor = colors.isDark
+        ? AppColors.routeEndNeutralDark
+        : AppColors.routeEndNeutralLight;
 
     return GlassBox(
       padding: const EdgeInsets.all(16),
@@ -80,28 +83,29 @@ class RouteTimelineCard extends StatelessWidget {
                 width: 26,
                 child: Column(
                   children: [
-                    _StopDot(
-                      color: AppColors.accentBlue,
-                      size: 13,
-                      innerOpacity: 1,
-                    ),
                     Container(
-                      width: 2,
-                      height: 50,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      width: 13,
+                      height: 13,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.accentBlue.withValues(alpha: 0.8),
-                            AppColors.accentGreen.withValues(alpha: 0.45),
-                          ],
+                        shape: BoxShape.circle,
+                        color: AppColors.routeStartBlue,
+                        border: Border.all(
+                          color: colors.isDark
+                              ? Colors.white.withValues(alpha: 0.44)
+                              : Colors.white.withValues(alpha: 0.75),
+                          width: 0.9,
                         ),
                       ),
                     ),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: colors.textTertiary.withValues(alpha: 0.55),
+                      ),
+                    ),
                     _StopDot(
-                      color: AppColors.accentGreen,
+                      color: endDotColor,
                       size: 13,
                       innerOpacity: 0.18,
                     ),
@@ -196,7 +200,7 @@ class _TimelineRow extends StatelessWidget {
         Text(
           timeText,
           style: AppTextStyles.captionBold(context).copyWith(
-            color: emphasize ? AppColors.accentBlue : colors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
       ],

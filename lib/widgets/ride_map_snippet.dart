@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +51,9 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
   RouteDetails? _routeDetails;
   bool _isLoadingRoute = false;
   List<LatLng> _polylineLatLng = const [];
+  BitmapDescriptor? _pickupMarkerIcon;
+  BitmapDescriptor? _destinationMarkerIcon;
+  bool? _markerIconsForDark;
 
   bool get _hasRouteCoords =>
       widget.pickupLat != null &&
@@ -62,6 +67,89 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
   void initState() {
     super.initState();
     _loadRouteDetails();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (_markerIconsForDark != isDark) {
+      _prepareMarkerIcons();
+    }
+  }
+
+  Future<void> _prepareMarkerIcons() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pickup = await _buildCircleMarkerIcon(
+      AppColors.routeStartBlue,
+      outlineColor: Colors.white,
+      outlineWidth: 1.0,
+    );
+    final destination = await _buildCircleMarkerIcon(
+      isDark ? AppColors.routeEndNeutralDark : AppColors.routeEndNeutralLight,
+    );
+    if (!mounted) return;
+    setState(() {
+      _pickupMarkerIcon = pickup;
+      _destinationMarkerIcon = destination;
+      _markerIconsForDark = isDark;
+    });
+  }
+
+  Future<BitmapDescriptor> _buildCircleMarkerIcon(
+    Color color, {
+    Color? outlineColor,
+    double outlineWidth = 0,
+  }) async {
+    const size = 52.0;
+    const supersample = 3.0;
+    const outlinedRadius = 7.8;
+    const fillRadiusWithOutline = 7.2;
+    const fillRadius = 7.8;
+
+    // Render at higher resolution first, then downsample to reduce jagged edges.
+    final hiSize = size * supersample;
+    final hiRecorder = ui.PictureRecorder();
+    final hiCanvas = Canvas(hiRecorder);
+    final hiCenter = Offset(hiSize / 2, hiSize / 2);
+
+    if (outlineColor != null && outlineWidth > 0) {
+      hiCanvas.drawCircle(
+        hiCenter,
+        outlinedRadius * supersample,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = outlineWidth * supersample
+          ..color = outlineColor,
+      );
+    }
+
+    hiCanvas.drawCircle(
+      hiCenter,
+      (outlineColor != null && outlineWidth > 0 ? fillRadiusWithOutline : fillRadius) *
+          supersample,
+      Paint()..color = color,
+    );
+
+    final hiImage = await hiRecorder
+        .endRecording()
+        .toImage(hiSize.toInt(), hiSize.toInt());
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawImageRect(
+      hiImage,
+      Rect.fromLTWH(0, 0, hiSize, hiSize),
+      const Rect.fromLTWH(0, 0, size, size),
+      Paint()
+        ..isAntiAlias = true
+        ..filterQuality = FilterQuality.high,
+    );
+
+    final image = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    final data = bytes?.buffer.asUint8List() ?? Uint8List(0);
+    return BitmapDescriptor.bytes(data);
   }
 
   @override
@@ -113,9 +201,6 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
       LatLng(widget.pickupLat!, widget.pickupLng!),
       LatLng(widget.destinationLat!, widget.destinationLng!),
     ];
-    if (_hasUserCoords) {
-      points.add(LatLng(widget.userLat!, widget.userLng!));
-    }
 
     double minLat = points.first.latitude;
     double maxLat = points.first.latitude;
@@ -151,6 +236,8 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
         markerId: const MarkerId('pickup'),
         position: LatLng(widget.pickupLat!, widget.pickupLng!),
         infoWindow: InfoWindow(title: widget.pickupLabel),
+        icon: _pickupMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        anchor: const Offset(0.5, 0.5),
         onTap: () => _showPointActions(
           label: widget.pickupLabel,
           lat: widget.pickupLat!,
@@ -161,7 +248,8 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
         markerId: const MarkerId('destination'),
         position: LatLng(widget.destinationLat!, widget.destinationLng!),
         infoWindow: InfoWindow(title: widget.destinationLabel),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        anchor: const Offset(0.5, 0.5),
         onTap: () => _showPointActions(
           label: widget.destinationLabel,
           lat: widget.destinationLat!,
@@ -169,17 +257,6 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
         ),
       ),
     };
-
-    if (_hasUserCoords) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('user'),
-          position: LatLng(widget.userLat!, widget.userLng!),
-          infoWindow: const InfoWindow(title: 'Your location'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        ),
-      );
-    }
 
     return markers;
   }
@@ -191,7 +268,7 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
         polylineId: const PolylineId('route'),
         points: _polylineLatLng,
         width: 5,
-        color: AppColors.accentBlue,
+        color: AppColors.routeEndBlue,
         geodesic: true,
       ),
     };
@@ -320,7 +397,7 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
             const SizedBox(height: 14),
             _routePoint(
               context,
-              dotColor: AppColors.accentBlue,
+              dotColor: AppColors.routeStartBlue,
               label: widget.pickupLabel,
             ),
             Padding(
@@ -333,7 +410,9 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
             ),
             _routePoint(
               context,
-              dotColor: AppColors.accentGreen,
+              dotColor: colors.isDark
+                  ? AppColors.routeEndNeutralDark
+                  : AppColors.routeEndNeutralLight,
               label: widget.destinationLabel,
             ),
             const Spacer(),
@@ -357,14 +436,6 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
               )
             else if (_routeDetails != null)
               _statsRow(context),
-            if (_hasUserCoords)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  'Includes your current location context',
-                  style: AppTextStyles.caption(context),
-                ),
-              ),
           ],
         ),
       ),
@@ -459,20 +530,25 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
     final apiKey = AppConfig.googleMapsApiKey;
     if (apiKey.isEmpty || !_hasRouteCoords) return null;
 
+    String toHex(Color c) {
+      final rgb = c.value & 0x00FFFFFF;
+      return rgb.toRadixString(16).padLeft(6, '0').toUpperCase();
+    }
+
+    final startHex = toHex(AppColors.routeStartBlue);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final endHex = toHex(
+      isDark ? AppColors.routeEndNeutralDark : AppColors.routeEndNeutralLight,
+    );
+
     final query = <String>[
       'size=1200x700',
       'scale=2',
       'maptype=roadmap',
       'key=${Uri.encodeQueryComponent(apiKey)}',
-      'markers=${Uri.encodeQueryComponent('color:blue|label:P|${widget.pickupLat},${widget.pickupLng}')}',
-      'markers=${Uri.encodeQueryComponent('color:green|label:D|${widget.destinationLat},${widget.destinationLng}')}',
+      'markers=${Uri.encodeQueryComponent('color:0x$startHex|label:P|${widget.pickupLat},${widget.pickupLng}')}',
+      'markers=${Uri.encodeQueryComponent('color:0x$endHex|label:D|${widget.destinationLat},${widget.destinationLng}')}',
     ];
-
-    if (_hasUserCoords) {
-      query.add(
-        'markers=${Uri.encodeQueryComponent('color:0x00BCD4|label:U|${widget.userLat},${widget.userLng}')}',
-      );
-    }
 
     if (_routeDetails != null && _routeDetails!.polylinePoints.isNotEmpty) {
       query.add(

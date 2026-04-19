@@ -88,6 +88,13 @@ class AppColors {
   static const Color accentRed = Color(0xFFFF3B30);
   static const Color textOnAccent = Color(0xFFFFFFFF);
 
+  // Route visual semantics
+  static const Color routeStartBlue = Color(0xFF2D8CFF);
+  static const Color routeEndBlue = Color(0xFF2D8CFF);
+  static const Color routeStartRed = Color(0xFFFF3B30);
+  static const Color routeEndNeutralDark = Color(0xFFBCC5D6);
+  static const Color routeEndNeutralLight = Color(0xFF9BA4B4);
+
   // TnG Green — Malaysia specific
   static const Color tngBlue = Color(0xFF005ABB);
 

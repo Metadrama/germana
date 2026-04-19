@@ -181,7 +181,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(widget.ride.driverAlias,
+                                Text(widget.ride.driverDisplayName,
                                     style: AppTextStyles.headline(context)
                                         .copyWith(fontSize: 15)),
                                 const SizedBox(height: 2),
@@ -241,12 +241,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                           _DetailRow(
                             icon: Icons.event_seat_rounded,
                             label: l10n.seats,
-                            value: '${widget.ride.seatsLeft} dari ${widget.ride.totalSeats}',
+                            value: '${widget.ride.seatsLeft}/${widget.ride.totalSeats} left',
                             trailing: StatusBadge.seats(
                               widget.ride.seatsLeft,
-                              label: widget.ride.seatsLeft == 1
-                                  ? '1 seat'
-                                  : '${widget.ride.seatsLeft} seats',
+                              label: '${widget.ride.seatsLeft}/${widget.ride.totalSeats} left',
                             ),
                           ),
                         ],
@@ -284,13 +282,20 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                            Text(l10n.pricePerSeat,
+                            Text(l10n.fairRateLabel,
                               style: AppTextStyles.caption(context)),
                           const SizedBox(height: 4),
                           Text(
                             'RM ${widget.ride.totalPrice.toStringAsFixed(2)}',
                             style: AppTextStyles.price(context)
                                 .copyWith(fontSize: 28),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Individual now: RM ${widget.ride.currentIndividualRate.toStringAsFixed(2)} each (${widget.ride.activeRiders}/${widget.ride.totalSeats} onboard)',
+                            style: AppTextStyles.caption(context).copyWith(
+                              color: colors.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           PriceBreakdownRow(
