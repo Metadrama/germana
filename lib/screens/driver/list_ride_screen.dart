@@ -4,7 +4,9 @@ import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/screens/explore/places_search_screen.dart';
+import 'package:germana/services/fair_rate_service.dart';
 import 'package:germana/services/location_service.dart';
+import 'package:germana/services/malaysia_fuel_price_service.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +21,8 @@ class ListRideScreen extends StatefulWidget {
 
 class _ListRideScreenState extends State<ListRideScreen> {
   final LocationService _locationService = LocationService();
+  final FairRateService _fairRateService = FairRateService();
+  final MalaysiaFuelPriceService _fuelPriceService = MalaysiaFuelPriceService();
 
   PlaceDetails? _origin;
   PlaceDetails? _destination;
@@ -46,6 +50,13 @@ class _ListRideScreenState extends State<ListRideScreen> {
     super.initState();
     _plateController = TextEditingController();
     _customCarController = TextEditingController();
+    _syncFuelPrices();
+  }
+
+  Future<void> _syncFuelPrices() async {
+    await _fuelPriceService.syncFromRemoteIfConfigured();
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -76,25 +87,62 @@ class _ListRideScreenState extends State<ListRideScreen> {
           'name': state.carModel,
           'fuel': state.carFuelConsumption,
           'plate': state.carPlate,
+          'fuelType': FuelType.ron95,
         },
-        {'name': 'Perodua Axia', 'fuel': 5.8, 'plate': 'ABC 5678'},
-        {'name': 'Honda City', 'fuel': 7.0, 'plate': 'DEF 9012'},
+        {
+          'name': 'Perodua Axia',
+          'fuel': 5.8,
+          'plate': 'ABC 5678',
+          'fuelType': FuelType.ron95,
+        },
+        {
+          'name': 'Honda City',
+          'fuel': 7.0,
+          'plate': 'DEF 9012',
+          'fuelType': FuelType.ron97,
+        },
       ];
 
-  double _fuelRate(List<Map<String, dynamic>> cars) {
-    if (_routeDetails == null) return 0.0;
-    return (_routeDetails!.distanceKm / 100) *
-        (cars[_selectedCar]['fuel'] as double) *
-        2.05;
+  FuelType _selectedFuelType(List<Map<String, dynamic>> cars) {
+    return (cars[_selectedCar]['fuelType'] as FuelType?) ?? FuelType.ron95;
   }
 
-  double get _tollRate => 2.00;
+  FairRateBreakdown? _pricingFor(List<Map<String, dynamic>> cars) {
+    if (_routeDetails == null) return null;
+
+    final selectedFuelType = _selectedFuelType(cars);
+    final fuelPrice = _fuelPriceService.currentPrice(selectedFuelType);
+    final toll = _routeDetails!.estimatedTollRm > 0
+        ? _routeDetails!.estimatedTollRm
+        : LocationService.estimateTollRm(_routeDetails!.distanceKm);
+
+    return _fairRateService.calculate(
+      FairRateInput(
+        distanceKm: _routeDetails!.distanceKm,
+        fuelConsumptionLPer100Km: (cars[_selectedCar]['fuel'] as double),
+        fuelPricePerLiter: fuelPrice,
+        seats: _seatCount,
+        tollRm: toll,
+      ),
+    );
+  }
+
+  String _fuelPriceLabel(List<Map<String, dynamic>> cars) {
+    final fuelType = _selectedFuelType(cars);
+    final price = _fuelPriceService.currentPrice(fuelType);
+    final trend = _fuelPriceService.trendLabel(fuelType);
+    final updated = _fuelPriceService.lastUpdated();
+    final trendIcon = trend == 'up'
+        ? '↑'
+        : trend == 'down'
+            ? '↓'
+            : '→';
+    return '${_fuelPriceService.label(fuelType)} RM ${price.toStringAsFixed(2)}/L $trendIcon · ${DateFormat('d MMM').format(updated)}';
+  }
 
   double _perSeat(List<Map<String, dynamic>> cars) {
-    if (_routeDetails == null || _seatCount <= 0) return 0.0;
-    return double.parse(
-      ((_fuelRate(cars) + _tollRate) / _seatCount).toStringAsFixed(2),
-    );
+    final pricing = _pricingFor(cars);
+    return pricing?.perSeatRecommendedRm ?? 0.0;
   }
 
   bool get _canAddPickup => _pickupPoints.length < _maxPickupPoints;
@@ -305,6 +353,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
     final colors = GermanaColors.of(context);
     final dateFmt = DateFormat('EEE, d MMM · h:mm a');
     final validationMessage = _submitAttempted ? _validateDraft(cars) : null;
+    final pricing = _pricingFor(cars);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,7 +613,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
         _sectionCard(
           context,
           title: 'Capacity and fair pricing',
-          subtitle: 'Set seats and review recommended per-seat fare.',
+          subtitle: 'Malaysia fuel tracked + realistic operating costs with safe margin.',
           icon: Icons.calculate_outlined,
           child: Column(
             children: [
@@ -590,14 +639,38 @@ class _ListRideScreenState extends State<ListRideScreen> {
               const SizedBox(height: 8),
               _calcRow(
                 context,
+                'Fuel tracker',
+                _fuelPriceLabel(cars),
+              ),
+              const SizedBox(height: 6),
+              _calcRow(
+                context,
                 l10n.fuelContributionRon,
-                'RM ${_fuelRate(cars).toStringAsFixed(2)}',
+                'RM ${(pricing?.fuelRm ?? 0).toStringAsFixed(2)}',
               ),
               const SizedBox(height: 6),
               _calcRow(
                 context,
                 l10n.tollShareLabel,
-                'RM ${_tollRate.toStringAsFixed(2)}',
+                'RM ${(pricing?.tollRm ?? 0).toStringAsFixed(2)}',
+              ),
+              const SizedBox(height: 6),
+              _calcRow(
+                context,
+                'Maintenance + wear',
+                'RM ${(pricing?.maintenanceRm ?? 0).toStringAsFixed(2)}',
+              ),
+              const SizedBox(height: 6),
+              _calcRow(
+                context,
+                'Pickup/parking misc',
+                'RM ${(pricing?.incidentalsRm ?? 0).toStringAsFixed(2)}',
+              ),
+              const SizedBox(height: 6),
+              _calcRow(
+                context,
+                'Driver safety margin (6%)',
+                'RM ${(pricing?.driverSafetyMarginRm ?? 0).toStringAsFixed(2)}',
               ),
               const SizedBox(height: 6),
               _calcRow(context, l10n.seatsLabel, '$_seatCount'),
@@ -614,6 +687,17 @@ class _ListRideScreenState extends State<ListRideScreen> {
                     style: AppTextStyles.price(context).copyWith(color: AppColors.accentBlue),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  pricing == null
+                      ? 'Set route to generate realistic fare range.'
+                      : 'Suggested range: RM ${pricing.perSeatLowerRm.toStringAsFixed(2)} - RM ${pricing.perSeatUpperRm.toStringAsFixed(2)} / seat',
+                  style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
+                  textAlign: TextAlign.right,
+                ),
               ),
             ],
           ),
@@ -652,7 +736,9 @@ class _ListRideScreenState extends State<ListRideScreen> {
               _calcRow(
                 context,
                 'Suggested fare',
-                'RM ${_perSeat(cars).toStringAsFixed(2)} per seat',
+                pricing == null
+                    ? 'Set route first'
+                    : 'RM ${pricing.perSeatRecommendedRm.toStringAsFixed(2)} per seat',
               ),
             ],
           ),

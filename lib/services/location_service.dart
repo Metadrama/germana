@@ -50,11 +50,15 @@ class RouteDetails {
   final double distanceKm; // Kilometers
   final String durationText;
   final String polylinePoints;
+  final double estimatedTollRm;
+  final bool isEstimated;
 
   RouteDetails({
     required this.distanceKm,
     required this.durationText,
     required this.polylinePoints,
+    this.estimatedTollRm = 0,
+    this.isEstimated = false,
   });
 }
 
@@ -226,11 +230,13 @@ class LocationService {
           if (data['status'] == 'OK') {
             final route = data['routes'][0];
             final leg = route['legs'][0];
+            final roadKm = leg['distance']['value'] / 1000.0;
 
             final details = RouteDetails(
-              distanceKm: leg['distance']['value'] / 1000.0, // convert meters to KM
+              distanceKm: roadKm, // convert meters to KM
               durationText: leg['duration']['text'],
               polylinePoints: route['overview_polyline']['points'],
+              estimatedTollRm: estimateTollRm(roadKm),
             );
             _routeCache[cacheKey] = details;
             return details;
@@ -238,7 +244,9 @@ class LocationService {
 
           // API-level failure should not be retried blindly.
           debugPrint('Directions API returned status: ${data['status']}');
-          return null;
+          final estimate = _buildEstimatedRoute(origin, destination);
+          _routeCache[cacheKey] = estimate;
+          return estimate;
         }
 
         // Retry on transient server-side failures.
@@ -246,37 +254,88 @@ class LocationService {
           continue;
         }
         debugPrint('Directions HTTP error: ${response.statusCode}');
-        return null;
+        final estimate = _buildEstimatedRoute(origin, destination);
+        _routeCache[cacheKey] = estimate;
+        return estimate;
       } on TimeoutException {
         if (attempt >= _directionsMaxAttempts) {
           debugPrint('Directions request timed out after $attempt attempts');
+          final estimate = _buildEstimatedRoute(origin, destination);
+          _routeCache[cacheKey] = estimate;
+          return estimate;
         }
       } catch (e) {
         debugPrint('Directions request error: $e');
-        if (attempt >= _directionsMaxAttempts) return null;
+        if (attempt >= _directionsMaxAttempts) {
+          final estimate = _buildEstimatedRoute(origin, destination);
+          _routeCache[cacheKey] = estimate;
+          return estimate;
+        }
       }
     }
 
-    return null;
+    final estimate = _buildEstimatedRoute(origin, destination);
+    _routeCache[cacheKey] = estimate;
+    return estimate;
   }
 
   RouteDetails _buildEstimatedRoute(PlaceDetails origin, PlaceDetails destination) {
-    final distanceKm = _haversineKm(
+    final straightLineKm = _haversineKm(
       origin.lat,
       origin.lng,
       destination.lat,
       destination.lng,
     );
 
-    // Conservative city/intercity blended speed for UX estimate.
-    const avgSpeedKmh = 40.0;
-    final durationMinutes = (distanceKm / avgSpeedKmh * 60).clamp(1, 24 * 60).round();
+    final detourFactor = _roadDetourFactor(straightLineKm);
+    final roadDistanceKm = straightLineKm * detourFactor;
+
+    final avgSpeedKmh = _blendedAvgSpeed(roadDistanceKm, DateTime.now());
+    final durationMinutes = (roadDistanceKm / avgSpeedKmh * 60)
+        .clamp(1, 24 * 60)
+        .round();
+
+    final tollRm = estimateTollRm(roadDistanceKm);
 
     return RouteDetails(
-      distanceKm: distanceKm,
+      distanceKm: roadDistanceKm,
       durationText: _formatDuration(durationMinutes),
       polylinePoints: '',
+      estimatedTollRm: tollRm,
+      isEstimated: true,
     );
+  }
+
+  static double estimateTollRm(double distanceKm) {
+    if (distanceKm < 15) return 0;
+    if (distanceKm < 40) return 2.2;
+    if (distanceKm < 80) return 5.5;
+    if (distanceKm < 160) return 10.5;
+    final longHaul = 16 + ((distanceKm - 160) * 0.05);
+    return longHaul.clamp(16, 45).toDouble();
+  }
+
+  double _roadDetourFactor(double straightLineKm) {
+    if (straightLineKm < 8) return 1.45;
+    if (straightLineKm < 25) return 1.30;
+    if (straightLineKm < 80) return 1.22;
+    return 1.15;
+  }
+
+  double _blendedAvgSpeed(double roadDistanceKm, DateTime now) {
+    final hour = now.hour;
+    final peakHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20);
+
+    final base = roadDistanceKm < 8
+        ? 24.0
+        : roadDistanceKm < 25
+            ? 38.0
+            : roadDistanceKm < 80
+                ? 60.0
+                : 78.0;
+
+    final trafficFactor = peakHour ? 0.78 : 0.9;
+    return base * trafficFactor;
   }
 
   double _haversineKm(double lat1, double lon1, double lat2, double lon2) {

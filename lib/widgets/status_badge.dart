@@ -14,7 +14,7 @@ class StatusBadge extends StatelessWidget {
     this.textColor,
   });
 
-  factory StatusBadge.seats(int seatsLeft) {
+  factory StatusBadge.seats(int seatsLeft, {String? label}) {
     final Color bg;
     final Color fg;
     if (seatsLeft <= 1) {
@@ -25,7 +25,7 @@ class StatusBadge extends StatelessWidget {
       fg = AppColors.accentGreen;
     }
     return StatusBadge(
-      label: '$seatsLeft tempat',
+      label: label ?? '$seatsLeft seats',
       color: bg,
       textColor: fg,
     );

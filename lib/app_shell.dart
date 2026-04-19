@@ -73,7 +73,7 @@ class _AppShellState extends State<AppShell> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.pill),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             height: 64,
             decoration: BoxDecoration(
@@ -81,17 +81,8 @@ class _AppShellState extends State<AppShell> {
               color: colors.navSurface,
               border: Border.all(
                 color: colors.navBorder,
-                width: 1,
+                width: 0.9,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: colors.isDark ? 0.3 : 0.08,
-                  ),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -115,7 +106,7 @@ class _AppShellState extends State<AppShell> {
                             size: 22,
                             color: isActive
                                 ? AppColors.accentBlue
-                                : colors.textTertiary,
+                                : colors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -127,7 +118,7 @@ class _AppShellState extends State<AppShell> {
                                 isActive ? FontWeight.w600 : FontWeight.w500,
                             color: isActive
                                 ? AppColors.accentBlue
-                                : colors.textTertiary,
+                                : colors.textSecondary,
                           ),
                         ),
                       ],

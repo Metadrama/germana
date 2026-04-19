@@ -220,14 +220,16 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                                 decoration: BoxDecoration(
                                   color: isActive
                                       ? AppColors.accentBlue
-                                      : colors.glassSurface,
+                                      : (colors.isDark
+                                          ? colors.backgroundElevated.withValues(alpha: 0.66)
+                                          : colors.glassSurface),
                                   borderRadius:
                                       BorderRadius.circular(AppRadius.pill),
                                   border: Border.all(
                                     color: isActive
                                         ? AppColors.accentBlue
-                                        : colors.glassBorder,
-                                    width: 1,
+                                        : colors.glassBorderSubtle,
+                                    width: 0.9,
                                   ),
                                 ),
                                 child: Center(
@@ -464,15 +466,17 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                                           decoration: BoxDecoration(
                                             color: isActive
                                                 ? AppColors.accentBlue
-                                                : colors.glassSurface,
+                                                : (colors.isDark
+                                                    ? colors.backgroundElevated.withValues(alpha: 0.66)
+                                                    : colors.glassSurface),
                                             borderRadius:
                                                 BorderRadius.circular(
                                                     AppRadius.pill),
                                             border: Border.all(
                                               color: isActive
                                                   ? AppColors.accentBlue
-                                                  : colors.glassBorder,
-                                              width: 1,
+                                                  : colors.glassBorderSubtle,
+                                              width: 0.9,
                                             ),
                                           ),
                                           child: Text(
@@ -537,9 +541,11 @@ class _SearchBar extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: BoxDecoration(
-            color: colors.glassSurface,
+            color: colors.isDark
+                ? colors.backgroundElevated.withValues(alpha: 0.72)
+                : colors.glassSurface,
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(color: colors.glassBorder, width: 1),
+            border: Border.all(color: colors.glassBorderSubtle, width: 0.9),
           ),
           child: TextField(
             onChanged: onChanged,

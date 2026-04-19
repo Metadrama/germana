@@ -37,6 +37,22 @@ Notes:
 - Dart code reads `GOOGLE_MAPS_API_KEY` via `String.fromEnvironment`.
 - Android manifest placeholder also reads the same key from `.env.json`
 	(and still supports env var / Gradle property in CI).
+- Optional: set `MALAYSIA_FUEL_PRICE_FEED_URL` to sync fuel prices from a
+	remote JSON feed for fair-rate calculations.
+
+Fuel feed JSON format (top-level or under `data`):
+
+```json
+{
+	"effectiveFrom": "2026-04-20",
+	"ron95": 2.05,
+	"ron97": 3.18,
+	"diesel": 3.26
+}
+```
+
+If feed is missing/unreachable/invalid, app automatically falls back to bundled
+local price snapshots.
 
 ### iOS key setup
 

@@ -9,7 +9,7 @@ import 'package:germana/widgets/status_badge.dart';
 import 'package:intl/intl.dart';
 
 /// AFA-inspired ride listing card — glassmorphic, theme-aware.
-class RideCard extends StatelessWidget {
+class RideCard extends StatefulWidget {
   final RideModel ride;
   final VoidCallback? onTap;
   final VoidCallback? onSecureSeat;
@@ -23,9 +23,14 @@ class RideCard extends StatelessWidget {
     this.distanceFromSearchKm,
   });
 
+  @override
+  State<RideCard> createState() => _RideCardState();
+}
+
+class _RideCardState extends State<RideCard> {
   String _formatTime(DateTime dt) {
     final diff = dt.difference(DateTime.now());
-    if (diff.isNegative) return 'Sudah lepas';
+    if (diff.isNegative) return 'Departed';
     if (diff.inMinutes < 60) return '${diff.inMinutes} min';
     if (diff.inHours < 24) return '${diff.inHours}j ${diff.inMinutes % 60}m';
     return DateFormat('EEE, h:mm a').format(dt);
@@ -33,8 +38,24 @@ class RideCard extends StatelessWidget {
 
   String _sexLabel(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ride.driverSex == DriverSex.female ? l10n.sexFemale : l10n.sexMale;
+    return widget.ride.driverSex == DriverSex.female ? l10n.sexFemale : l10n.sexMale;
   }
+
+  DateTime _estimatedArrival() {
+    final avgSpeedKmh = widget.ride.distanceKm < 8
+        ? 24.0
+        : widget.ride.distanceKm < 25
+            ? 38.0
+            : widget.ride.distanceKm < 80
+                ? 60.0
+                : 78.0;
+    final minutes = (widget.ride.distanceKm / avgSpeedKmh * 60)
+        .clamp(1, 24 * 60)
+        .round();
+    return widget.ride.departureTime.add(Duration(minutes: minutes));
+  }
+
+  String _timeLabel(DateTime time) => DateFormat('h:mm a').format(time);
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +63,7 @@ class RideCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Material(
         type: MaterialType.transparency,
         child: GlassBox(
@@ -52,7 +73,7 @@ class RideCard extends StatelessWidget {
             builder: (context, constraints) {
               if (constraints.maxWidth < 140) {
                 return Text(
-                  '${ride.origin} -> ${ride.destination}',
+                  '${widget.ride.origin} -> ${widget.ride.destination}',
                   style: AppTextStyles.caption(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -62,48 +83,59 @@ class RideCard extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                // Route row (switch to text-only on ultra narrow widths)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth < 120) {
-                      return Text(
-                        '${ride.origin} -> ${ride.destination}',
-                        style: AppTextStyles.headline(context),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      );
-                    }
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth < 120) {
+                            return Text(
+                              '${widget.ride.origin} -> ${widget.ride.destination}',
+                              style: AppTextStyles.headline(context),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            );
+                          }
 
-                    return Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.accentBlue,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${ride.origin} -> ${ride.destination}',
-                            style: AppTextStyles.headline(context),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: StatusBadge.seats(ride.seatsLeft),
+                          return Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.accentBlue,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '${widget.ride.origin} -> ${widget.ride.destination}',
+                                  style: AppTextStyles.headline(context),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: StatusBadge.seats(
+                        widget.ride.seatsLeft,
+                        label: widget.ride.seatsLeft == 1
+                            ? '1 seat'
+                            : '${widget.ride.seatsLeft} seats',
+                      ),
+                    ),
+                  ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
 
                 // Car + departure info
                 Wrap(
@@ -113,12 +145,12 @@ class RideCard extends StatelessWidget {
                     _metaItem(
                       context,
                       icon: Icons.directions_car_rounded,
-                      label: ride.carModel,
+                      label: widget.ride.carModel,
                     ),
                     _metaItem(
                       context,
                       icon: Icons.straighten_rounded,
-                      label: '${ride.distanceKm.toStringAsFixed(1)} km',
+                      label: '${widget.ride.distanceKm.toStringAsFixed(1)} km',
                     ),
                     _metaItem(
                       context,
@@ -128,29 +160,16 @@ class RideCard extends StatelessWidget {
                     _metaItem(
                       context,
                       icon: Icons.schedule_rounded,
-                      label: '${l10n.departureTimeLabel}: ${_formatTime(ride.departureTime)}',
+                      label: '${l10n.departureTimeLabel}: ${_formatTime(widget.ride.departureTime)}',
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
 
-                Row(
-                  children: [
-                    Icon(Icons.pin_drop_outlined,
-                        size: 14, color: colors.textTertiary),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        'Pickup: ${ride.pickupAddress}',
-                        style: AppTextStyles.caption(context),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                _routeTimeline(context),
 
-                if (distanceFromSearchKm != null) ...[
+                if (widget.distanceFromSearchKm != null) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -161,7 +180,7 @@ class RideCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '~${distanceFromSearchKm!.toStringAsFixed(1)} km to searched destination',
+                        '~${widget.distanceFromSearchKm!.toStringAsFixed(1)} km to searched destination',
                         style: AppTextStyles.caption(context).copyWith(
                           color: colors.textSecondary,
                           fontWeight: FontWeight.w600,
@@ -184,7 +203,7 @@ class RideCard extends StatelessWidget {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          'RM ${ride.totalPrice.toStringAsFixed(2)}',
+                          'RM ${widget.ride.totalPrice.toStringAsFixed(2)}',
                           style: AppTextStyles.price(context),
                         ),
                         const SizedBox(width: 4),
@@ -201,7 +220,7 @@ class RideCard extends StatelessWidget {
                     final cta = PillButton(
                       label: 'Tempah',
                       isSmall: true,
-                      onPressed: onSecureSeat ?? onTap,
+                      onPressed: widget.onSecureSeat ?? widget.onTap,
                     );
 
                     if (compact) {
@@ -226,13 +245,13 @@ class RideCard extends StatelessWidget {
                   },
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
-                  PriceBreakdownRow(
-                    fuelShare: ride.fuelShare,
-                    tollShare: ride.tollShare,
-                    platformFee: ride.platformFee,
-                  ),
+                PriceBreakdownRow(
+                  fuelShare: widget.ride.fuelShare,
+                  tollShare: widget.ride.tollShare,
+                  platformFee: widget.ride.platformFee,
+                ),
                 ],
               );
             },
@@ -251,13 +270,149 @@ class RideCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: colors.textTertiary),
+        Icon(icon, size: 14, color: colors.textSecondary.withValues(alpha: 0.9)),
         const SizedBox(width: 4),
         Text(
           label,
-          style: AppTextStyles.caption(context),
+          style: AppTextStyles.caption(context).copyWith(
+            color: colors.textSecondary.withValues(alpha: 0.95),
+          ),
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
+        ),
+      ],
+    );
+  }
+
+  Widget _routeTimeline(BuildContext context) {
+    final endTime = _timeLabel(_estimatedArrival());
+    final startTime = _timeLabel(widget.ride.departureTime);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 22,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.accentBlue,
+                      ),
+                    ),
+                    Container(
+                      width: 2,
+                      height: 32,
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.accentBlue.withValues(alpha: 0.78),
+                            AppColors.accentGreen.withValues(alpha: 0.45),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.accentGreen.withValues(alpha: 0.12),
+                        border: Border.all(color: AppColors.accentGreen, width: 2.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  children: [
+                    _routeTimelineRow(
+                      context,
+                      label: 'From',
+                      value: widget.ride.pickupAddress,
+                      timeText: startTime,
+                      emphasize: true,
+                    ),
+                    const SizedBox(height: 10),
+                    _routeTimelineRow(
+                      context,
+                      label: 'To',
+                      value: widget.ride.destination,
+                      timeText: endTime,
+                      emphasize: false,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _routeTimelineRow(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required String timeText,
+    required bool emphasize,
+  }) {
+    final colors = GermanaColors.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.caption(context).copyWith(
+                  color: colors.isDark
+                      ? colors.textSecondary.withValues(alpha: 0.92)
+                      : colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: (emphasize ? AppTextStyles.headline(context) : AppTextStyles.body(context)).copyWith(
+                  fontSize: emphasize ? 14 : 13,
+                  color: emphasize
+                      ? colors.textPrimary
+                      : colors.textPrimary.withValues(alpha: 0.9),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          timeText,
+          style: AppTextStyles.captionBold(context).copyWith(
+            color: emphasize
+                ? AppColors.accentBlue
+                : colors.isDark
+                    ? colors.textSecondary.withValues(alpha: 0.9)
+                    : colors.textSecondary,
+          ),
         ),
       ],
     );

@@ -55,7 +55,7 @@ class LedgerScreen extends StatelessWidget {
                     ),
                     Container(
                       width: 1, height: 40,
-                      color: GermanaColors.of(context).glassBorder,
+                      color: GermanaColors.of(context).divider,
                     ),
                     Expanded(
                       child: Padding(

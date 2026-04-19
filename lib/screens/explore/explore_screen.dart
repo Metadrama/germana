@@ -25,6 +25,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   String _selectedFilter = 'all';
   PlaceDetails? _searchDestination;
 
+  String _coordsLabel(double lat, double lng) {
+    final latH = lat >= 0 ? 'N' : 'S';
+    final lngH = lng >= 0 ? 'E' : 'W';
+    return '${lat.abs().toStringAsFixed(4)}°$latH, ${lng.abs().toStringAsFixed(4)}°$lngH';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
@@ -60,12 +66,30 @@ class _ExploreScreenState extends State<ExploreScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Wordmark + greeting
-                  Text('germana', style: AppTextStyles.wordmark(context)),
+                  // Real location header
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.my_location_rounded,
+                        size: 18,
+                        color: AppColors.accentBlue,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          state.currentLocationLabel,
+                          style: AppTextStyles.title(context),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    '$greeting, ${state.name.split(' ').first} · $dateStr',
+                    '$greeting, ${state.name.split(' ').first} · $dateStr · ${_coordsLabel(state.currentLocationLat, state.currentLocationLng)}',
                     style: AppTextStyles.bodySecondary(context),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
 
                   const SizedBox(height: 20),
@@ -99,9 +123,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: colors.glassSurface,
+                        color: colors.isDark
+                            ? colors.backgroundElevated.withValues(alpha: 0.72)
+                            : colors.glassSurface,
                         borderRadius: BorderRadius.circular(AppRadius.chip),
-                        border: Border.all(color: colors.glassBorder),
+                        border: Border.all(color: colors.glassBorderSubtle, width: 0.9),
                       ),
                       child: Row(
                         children: [
@@ -178,14 +204,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColors.accentBlue
-                                  : colors.glassSurface,
+                                  : (colors.isDark
+                                      ? colors.backgroundElevated.withValues(alpha: 0.66)
+                                      : colors.glassSurface),
                               borderRadius:
                                   BorderRadius.circular(AppRadius.pill),
                               border: Border.all(
                                 color: isSelected
                                     ? AppColors.accentBlue
-                                    : colors.glassBorder,
-                                width: 1,
+                                    : colors.glassBorderSubtle,
+                                width: 0.9,
                               ),
                             ),
                             child: Text(
@@ -255,15 +283,42 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         Navigator.of(context).push(
                           PageRouteBuilder(
                             transitionDuration:
-                                const Duration(milliseconds: 400),
+                                const Duration(milliseconds: 320),
                             reverseTransitionDuration:
-                                const Duration(milliseconds: 350),
+                                const Duration(milliseconds: 260),
                             pageBuilder: (_, __, ___) =>
                                 RideDetailScreen(ride: ride),
-                            transitionsBuilder: (_, animation, __, child) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: child,
+                            transitionsBuilder: (_, animation, secondaryAnimation, child) {
+                              final primaryCurve = CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                                reverseCurve: Curves.easeInCubic,
+                              );
+                              final slideIn = Tween<Offset>(
+                                begin: const Offset(0.07, 0.0),
+                                end: Offset.zero,
+                              ).animate(primaryCurve);
+                              final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(primaryCurve);
+
+                              final slideOut = Tween<Offset>(
+                                begin: Offset.zero,
+                                end: const Offset(-0.03, 0.0),
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: secondaryAnimation,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                              );
+
+                              return SlideTransition(
+                                position: slideOut,
+                                child: FadeTransition(
+                                  opacity: fadeIn,
+                                  child: SlideTransition(
+                                    position: slideIn,
+                                    child: child,
+                                  ),
+                                ),
                               );
                             },
                           ),

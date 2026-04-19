@@ -241,12 +241,21 @@ class _PastRideCard extends StatelessWidget {
                   children: [
                     Text(
                       DateFormat('d MMM · h:mm a').format(ride.departureTime),
-                      style: AppTextStyles.caption(context),
+                      style: AppTextStyles.caption(context).copyWith(
+                        color: colors.textSecondary,
+                      ),
                     ),
                     if (ride.driverName != null) ...[
-                      Text(' · ', style: AppTextStyles.caption(context)),
+                      Text(
+                        ' · ',
+                        style: AppTextStyles.caption(context).copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
                       Text(ride.driverName!,
-                          style: AppTextStyles.caption(context)),
+                          style: AppTextStyles.caption(context).copyWith(
+                            color: colors.textSecondary,
+                          )),
                     ],
                   ],
                 ),

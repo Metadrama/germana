@@ -61,7 +61,7 @@ class AppState extends ChangeNotifier {
   Locale get locale => _locale;
 
   // --- Theme ---
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
   ThemeMode get themeMode => _themeMode;
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
@@ -298,7 +298,7 @@ class AppState extends ChangeNotifier {
       case 'dark':
         return ThemeMode.dark;
       default:
-        return ThemeMode.system;
+        return ThemeMode.light;
     }
   }
 

@@ -102,11 +102,6 @@ class AppMapStyles {
       "stylers": [{"color": "#e5e5e5"}]
     },
     {
-      "featureType": "roi",
-      "elementType": "geometry",
-      "stylers": [{"visibility": "off"}]
-    },
-    {
       "featureType": "road",
       "elementType": "geometry",
       "stylers": [{"color": "#ffffff"}]

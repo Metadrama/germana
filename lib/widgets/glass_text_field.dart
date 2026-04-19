@@ -29,11 +29,13 @@ class GlassTextField extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: BoxDecoration(
-            color: colors.glassSurface,
+            color: colors.isDark
+                ? colors.backgroundElevated.withValues(alpha: 0.72)
+                : colors.glassSurface,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
-              color: colors.glassBorder,
-              width: 1,
+              color: colors.glassBorderSubtle,
+              width: 0.9,
             ),
           ),
           child: TextField(

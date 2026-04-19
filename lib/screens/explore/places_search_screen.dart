@@ -105,7 +105,7 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
       backgroundColor: colors.background,
       body: Stack(
         children: [
-          // Layered atmospheric background to avoid flat gray appearance.
+          // Clean background wash to keep focus on search results.
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -114,51 +114,33 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     colors.background,
-                    colors.backgroundElevated,
+                    colors.backgroundElevated.withValues(alpha: 0.97),
                   ],
                 ),
               ),
             ),
           ),
           Positioned(
-            top: -120,
-            right: -80,
+            top: -100,
+            right: -100,
             child: Container(
-              width: 280,
-              height: 280,
+              width: 220,
+              height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.accentBlue.withValues(alpha: 0.18),
-                    AppColors.accentBlue.withValues(alpha: 0.0),
-                  ],
-                ),
+                color: AppColors.accentBlue.withValues(alpha: 0.06),
               ),
             ),
           ),
           Positioned(
-            top: 180,
-            left: -120,
+            bottom: -120,
+            left: -110,
             child: Container(
-              width: 260,
-              height: 260,
+              width: 240,
+              height: 240,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.accentSky.withValues(alpha: 0.12),
-                    AppColors.accentSky.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                color: colors.background.withValues(alpha: 0.5),
+                color: AppColors.accentSky.withValues(alpha: 0.05),
               ),
             ),
           ),

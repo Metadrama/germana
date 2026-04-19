@@ -70,13 +70,14 @@ class _PriceBreakdownRowState extends State<PriceBreakdownRow>
               Icon(
                 Icons.info_outline_rounded,
                 size: 14,
-                color: colors.textTertiary,
+                color: colors.textSecondary,
               ),
               const SizedBox(width: 4),
               Text(
                 l10n.priceBreakdownTitle,
                 style: AppTextStyles.caption(context).copyWith(
-                  color: colors.textTertiary,
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(width: 4),
@@ -86,7 +87,7 @@ class _PriceBreakdownRowState extends State<PriceBreakdownRow>
                 child: Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 14,
-                  color: colors.textTertiary,
+                  color: colors.textSecondary,
                 ),
               ),
             ],

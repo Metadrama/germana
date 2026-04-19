@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
@@ -6,16 +8,60 @@ import 'package:germana/models/ride_model.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/price_breakdown_row.dart';
+import 'package:germana/widgets/route_timeline.dart';
 import 'package:germana/widgets/ride_map_snippet.dart';
 import 'package:germana/widgets/status_badge.dart';
 import 'package:germana/screens/explore/payment_screen.dart';
 import 'package:intl/intl.dart';
 
 /// Full ride detail screen — Hero transition, route viz, driver info, price, CTA.
-class RideDetailScreen extends StatelessWidget {
+class RideDetailScreen extends StatefulWidget {
   final RideModel ride;
 
   const RideDetailScreen({super.key, required this.ride});
+
+  @override
+  State<RideDetailScreen> createState() => _RideDetailScreenState();
+}
+
+class _RideDetailScreenState extends State<RideDetailScreen> {
+  static const int _warmRouteLimit = 12;
+  static final LinkedHashSet<String> _warmRoutes = LinkedHashSet<String>();
+
+  bool _showMap = false;
+
+  String _routeKey() {
+    String fmt(double? v) => v?.toStringAsFixed(5) ?? 'na';
+    return '${fmt(widget.ride.pickupLat)},${fmt(widget.ride.pickupLng)}->${fmt(widget.ride.destinationLat)},${fmt(widget.ride.destinationLng)}';
+  }
+
+  void _touchWarmRoute(String key) {
+    // LRU refresh behavior: remove then add to move route to newest position.
+    _warmRoutes.remove(key);
+    _warmRoutes.add(key);
+    while (_warmRoutes.length > _warmRouteLimit) {
+      _warmRoutes.remove(_warmRoutes.first);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final key = _routeKey();
+    final isWarm = _warmRoutes.contains(key);
+
+    // For recently visited routes, mount map immediately.
+    // For cold routes, keep a short delay so page transition remains smooth.
+    final delay = isWarm
+        ? Duration.zero
+        : const Duration(milliseconds: 180);
+
+    Future<void>.delayed(delay, () {
+      if (!mounted) return;
+      setState(() => _showMap = true);
+      _touchWarmRoute(key);
+    });
+  }
 
   String _formatDeparture(DateTime dt) {
     final diff = dt.difference(DateTime.now());
@@ -25,7 +71,7 @@ class RideDetailScreen extends StatelessWidget {
   }
 
   String _sexLabel(AppLocalizations l10n) {
-    return ride.driverSex == DriverSex.female ? l10n.sexFemale : l10n.sexMale;
+    return widget.ride.driverSex == DriverSex.female ? l10n.sexFemale : l10n.sexMale;
   }
 
   @override
@@ -66,16 +112,53 @@ class RideDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RideMapSnippet(
-                      pickupLabel: ride.pickupAddress,
-                      destinationLabel: ride.destination,
-                      pickupLat: ride.pickupLat,
-                      pickupLng: ride.pickupLng,
-                      destinationLat: ride.destinationLat,
-                      destinationLng: ride.destinationLng,
-                      userLat: appState.currentLocationLat,
-                      userLng: appState.currentLocationLng,
+                    RouteTimelineCard(
+                      originLabel: widget.ride.pickupAddress,
+                      destinationLabel: widget.ride.destination,
+                      departureTime: widget.ride.departureTime,
+                      distanceKm: widget.ride.distanceKm,
+                      subtitle: 'Journey path with departure and estimated arrival.',
                     ),
+
+                    const SizedBox(height: 16),
+
+                    _showMap
+                        ? RideMapSnippet(
+                            pickupLabel: widget.ride.pickupAddress,
+                            destinationLabel: widget.ride.destination,
+                            pickupLat: widget.ride.pickupLat,
+                            pickupLng: widget.ride.pickupLng,
+                            destinationLat: widget.ride.destinationLat,
+                            destinationLng: widget.ride.destinationLng,
+                            userLat: appState.currentLocationLat,
+                            userLng: appState.currentLocationLng,
+                          )
+                        : GlassBox(
+                            padding: EdgeInsets.zero,
+                            child: SizedBox(
+                              height: 210,
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'Preparing map…',
+                                      style: AppTextStyles.caption(context),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
 
                     const SizedBox(height: 16),
 
@@ -98,7 +181,7 @@ class RideDetailScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(ride.driverAlias,
+                                Text(widget.ride.driverAlias,
                                     style: AppTextStyles.headline(context)
                                         .copyWith(fontSize: 15)),
                                 const SizedBox(height: 2),
@@ -134,38 +217,43 @@ class RideDetailScreen extends StatelessWidget {
                           _DetailRow(
                             icon: Icons.pin_drop_outlined,
                             label: l10n.pickupLabel,
-                            value: ride.pickupAddress,
+                            value: widget.ride.pickupAddress,
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.straighten_rounded,
                             label: l10n.distanceLabel,
-                            value: '${ride.distanceKm.toStringAsFixed(1)} km',
+                            value: '${widget.ride.distanceKm.toStringAsFixed(1)} km',
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.directions_car_rounded,
                             label: l10n.yourCar,
-                            value: ride.carModel,
+                            value: widget.ride.carModel,
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.schedule_rounded,
                             label: l10n.departIn,
-                            value: _formatDeparture(ride.departureTime),
+                            value: _formatDeparture(widget.ride.departureTime),
                           ),
                           Divider(height: 20, color: colors.divider),
                           _DetailRow(
                             icon: Icons.event_seat_rounded,
                             label: l10n.seats,
-                            value: '${ride.seatsLeft} dari ${ride.totalSeats}',
-                            trailing: StatusBadge.seats(ride.seatsLeft),
+                            value: '${widget.ride.seatsLeft} dari ${widget.ride.totalSeats}',
+                            trailing: StatusBadge.seats(
+                              widget.ride.seatsLeft,
+                              label: widget.ride.seatsLeft == 1
+                                  ? '1 seat'
+                                  : '${widget.ride.seatsLeft} seats',
+                            ),
                           ),
                         ],
                       ),
                     ),
 
-                    if (ride.carPhotoUrl != null && ride.carPhotoUrl!.isNotEmpty) ...[
+                    if (widget.ride.carPhotoUrl != null && widget.ride.carPhotoUrl!.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       GlassBox(
                         padding: const EdgeInsets.all(12),
@@ -177,7 +265,7 @@ class RideDetailScreen extends StatelessWidget {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(14),
                               child: Image.network(
-                                ride.carPhotoUrl!,
+                                widget.ride.carPhotoUrl!,
                                 height: 160,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
@@ -200,15 +288,15 @@ class RideDetailScreen extends StatelessWidget {
                               style: AppTextStyles.caption(context)),
                           const SizedBox(height: 4),
                           Text(
-                            'RM ${ride.totalPrice.toStringAsFixed(2)}',
+                            'RM ${widget.ride.totalPrice.toStringAsFixed(2)}',
                             style: AppTextStyles.price(context)
                                 .copyWith(fontSize: 28),
                           ),
                           const SizedBox(height: 12),
                           PriceBreakdownRow(
-                            fuelShare: ride.fuelShare,
-                            tollShare: ride.tollShare,
-                            platformFee: ride.platformFee,
+                            fuelShare: widget.ride.fuelShare,
+                            tollShare: widget.ride.tollShare,
+                            platformFee: widget.ride.platformFee,
                           ),
                         ],
                       ),
@@ -219,7 +307,7 @@ class RideDetailScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: PillButton(
-                        label: '${l10n.confirmPayment}  ·  RM ${ride.totalPrice.toStringAsFixed(2)}',
+                        label: '${l10n.confirmPayment}  ·  RM ${widget.ride.totalPrice.toStringAsFixed(2)}',
                         expand: true,
                         onPressed: () {
                           Navigator.of(context).push(
@@ -228,7 +316,7 @@ class RideDetailScreen extends StatelessWidget {
                               reverseTransitionDuration:
                                   const Duration(milliseconds: 300),
                               pageBuilder: (_, __, ___) =>
-                                  PaymentScreen(ride: ride),
+                                  PaymentScreen(ride: widget.ride),
                               transitionsBuilder: (_, animation, __, child) {
                                 return SlideTransition(
                                   position: Tween<Offset>(

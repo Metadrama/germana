@@ -24,48 +24,48 @@ class GermanaColors {
 
   // Backgrounds
   Color get background =>
-      isDark ? const Color(0xFF0A0E1A) : const Color(0xFFF0F4FF);
+      isDark ? const Color(0xFF0D1320) : const Color(0xFFF7F9FC);
   Color get backgroundElevated =>
-      isDark ? const Color(0xFF141829) : const Color(0xFFE8ECF7);
+      isDark ? const Color(0xFF151E30) : const Color(0xFFFFFFFF);
 
   // Glass
   Color get glassSurface => isDark
-      ? const Color(0x33FFFFFF) // 20% white on dark
-      : const Color(0x73FFFFFF); // 45% white on light
+      ? const Color(0xD9273349)
+      : const Color(0xF7FFFFFF);
   Color get glassBorder => isDark
-      ? const Color(0x26FFFFFF) // 15% white
-      : const Color(0xB3FFFFFF); // 70% white
+      ? const Color(0x4D8FA6D3)
+      : const Color(0x331A2847);
   Color get glassBorderSubtle => isDark
-      ? const Color(0x13FFFFFF) // 7%
-      : const Color(0x4DFFFFFF); // 30%
+      ? const Color(0x338FA6D3)
+      : const Color(0x1F1A2847);
 
   // Text
   Color get textPrimary =>
-      isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1C1C1E);
+      isDark ? const Color(0xFFF2F5FB) : const Color(0xFF141C2B);
   Color get textSecondary =>
-      isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73);
+      isDark ? const Color(0xFFB7C2D9) : const Color(0xFF3A4760);
   Color get textTertiary =>
-      isDark ? const Color(0xFF636366) : const Color(0xFF8E8E93);
+      isDark ? const Color(0xFF95A3C2) : const Color(0xFF5A667C);
 
   // Ambient blobs
   Color get blobViolet => isDark
-      ? const Color(0x338B5CF6) // deeper violet, lower opacity
-      : const Color(0x59C4A6FF);
+      ? const Color(0x145D72C9)
+      : const Color(0x145A9BFF);
   Color get blobSky => isDark
-      ? const Color(0x2B0EA5E9) // deeper sky
-      : const Color(0x4D85DAFF);
+      ? const Color(0x12338AD6)
+      : const Color(0x123E7ECC);
 
   // Dividers
   Color get divider =>
-      isDark ? const Color(0x1AFFFFFF) : const Color(0x1A000000);
+      isDark ? const Color(0x336E7FA6) : const Color(0x1F23324F);
 
   // Nav bar
   Color get navSurface => isDark
-      ? const Color(0x4D1C1C1E)
-      : const Color(0x8CFFFFFF);
+      ? const Color(0xE01A2538)
+      : const Color(0xF2FFFFFF);
   Color get navBorder => isDark
-      ? const Color(0x1AFFFFFF)
-      : const Color(0xB3FFFFFF);
+      ? const Color(0x338FA6D3)
+      : const Color(0x291A2847);
 
   // Card fill (for non-glass elements)
   Color get cardFill => isDark
@@ -166,21 +166,21 @@ class AppTextStyles {
   static TextStyle bodySecondary(BuildContext context) {
     final c = GermanaColors.of(context);
     return GoogleFonts.plusJakartaSans(
-      fontSize: 15, fontWeight: FontWeight.w400, color: c.textSecondary,
+      fontSize: 15, fontWeight: FontWeight.w500, color: c.textSecondary,
     );
   }
 
   static TextStyle caption(BuildContext context) {
     final c = GermanaColors.of(context);
     return GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: FontWeight.w500, color: c.textSecondary,
+      fontSize: 13, fontWeight: FontWeight.w500, color: c.textSecondary,
     );
   }
 
   static TextStyle captionBold(BuildContext context) {
     final c = GermanaColors.of(context);
     return GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: FontWeight.w600, color: c.textPrimary,
+      fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary,
     );
   }
 

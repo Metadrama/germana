@@ -17,27 +17,23 @@ class GlassBox extends StatelessWidget {
   const GlassBox({
     super.key,
     this.child,
-    this.blur = 20,
-    this.opacity = 0.45,
+    this.blur = 10,
+    this.opacity = 0.92,
     this.borderRadius = 20,
     this.tint,
     this.padding,
     this.margin,
-    this.borderWidth = 1.0,
+    this.borderWidth = 0.9,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
-    final isDark = colors.isDark;
 
-    // In dark mode: tint is a subtle white overlay; in light: stronger white
-    final effectiveTint = tint ?? (isDark ? Colors.white : Colors.white);
-    final effectiveOpacity = isDark ? (opacity * 0.4).clamp(0.0, 1.0) : opacity;
-    final borderColor = colors.glassBorder;
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.2)
-        : Colors.black.withValues(alpha: 0.06);
+    // Flat, readable glass plate: consistent tint + subtle edge, no heavy effects.
+    final effectiveTint = tint ?? colors.glassSurface;
+    final effectiveOpacity = opacity.clamp(0.0, 1.0);
+    final borderColor = colors.glassBorderSubtle;
 
     return Container(
       margin: margin,
@@ -54,13 +50,6 @@ class GlassBox extends StatelessWidget {
                 color: borderColor,
                 width: borderWidth,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: shadowColor,
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: child,
           ),

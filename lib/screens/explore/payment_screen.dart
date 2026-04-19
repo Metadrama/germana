@@ -257,7 +257,12 @@ class _PaymentMethodCard extends StatelessWidget {
                 children: [
                   Text(label,
                       style: AppTextStyles.headline(context).copyWith(fontSize: 15)),
-                  Text(subtitle, style: AppTextStyles.caption(context)),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -266,11 +271,25 @@ class _PaymentMethodCard extends StatelessWidget {
               width: 22, height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: isSelected
+                    ? AppColors.accentBlue
+                    : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.accentBlue : colors.textTertiary,
-                  width: isSelected ? 6 : 1.5,
+                  color: isSelected
+                      ? AppColors.accentBlue
+                      : colors.glassBorderSubtle,
+                  width: isSelected ? 1.2 : 1,
                 ),
               ),
+              child: isSelected
+                  ? const Center(
+                      child: Icon(
+                        Icons.check_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
             ),
           ],
         ),

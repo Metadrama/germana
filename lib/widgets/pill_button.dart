@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 
-/// Apple-style pill-shaped button with spring bounce animation.
+/// Clean pill-shaped button with subtle press feedback.
 class PillButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -40,7 +40,7 @@ class _PillButtonState extends State<PillButton>
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
+    _scale = Tween<double>(begin: 1.0, end: 0.97).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -84,17 +84,8 @@ class _PillButtonState extends State<PillButton>
             color: widget.isOutlined ? Colors.transparent : bg,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: widget.isOutlined
-                ? Border.all(color: bg, width: 1.5)
+                ? Border.all(color: bg, width: 1.2)
                 : null,
-            boxShadow: widget.isOutlined
-                ? null
-                : [
-                    BoxShadow(
-                      color: bg.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,

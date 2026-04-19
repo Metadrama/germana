@@ -5,4 +5,11 @@ class AppConfig {
     'GOOGLE_MAPS_API_KEY',
     defaultValue: '',
   );
+
+  /// Optional remote JSON endpoint for Malaysia fuel prices.
+  /// Expected keys: ron95, ron97, diesel, optional effectiveFrom.
+  static const String malaysiaFuelPriceFeedUrl = String.fromEnvironment(
+    'MALAYSIA_FUEL_PRICE_FEED_URL',
+    defaultValue: '',
+  );
 }
