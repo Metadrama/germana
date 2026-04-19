@@ -94,3 +94,41 @@ You can also run these from VS Code Tasks:
 
 - `Run Web (env file)`
 - `Run Android (env file)`
+
+## Release commands (with env)
+
+Use the same `.env.json` for release mode so API keys and defines are injected
+the same way as debug.
+
+Run release build directly on connected Android device:
+
+```powershell
+./scripts/run-android-release.cmd
+```
+
+Build Android APK (release):
+
+```powershell
+./scripts/build-android-apk-release.cmd
+```
+
+Build Android App Bundle (Play Store upload):
+
+```powershell
+./scripts/build-android-aab-release.cmd
+```
+
+Build Web release bundle:
+
+```powershell
+./scripts/build-web-release.cmd
+```
+
+Outputs:
+
+- APK: `build/app/outputs/flutter-apk/app-release.apk`
+- AAB: `build/app/outputs/bundle/release/app-release.aab`
+- Web: `build/web/`
+
+Note: Android/iOS release publishing still requires signing setup. These scripts
+handle environment define injection (`--dart-define-from-file=.env.json`).

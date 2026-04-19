@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:germana/core/config.dart';
 import 'package:germana/core/glass_box.dart';
@@ -227,6 +228,11 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
                 myLocationButtonEnabled: false,
                 mapToolbarEnabled: false,
                 myLocationEnabled: false,
+                gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                  Factory<OneSequenceGestureRecognizer>(
+                    () => EagerGestureRecognizer(),
+                  ),
+                },
                 markers: _buildMarkers(),
                 polylines: _buildPolylines(),
                 style: Theme.of(context).brightness == Brightness.dark
