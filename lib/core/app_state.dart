@@ -1,9 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:germana/data/mock_rides_peninsular.dart';
+import 'package:germana/models/ride_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum UserRole { passenger, driver, both }
 
 enum PersonSex { male, female }
+
+enum DriverListingStatus { draft, published, paused, inProgress, completed, cancelled }
+
+enum RideRequestStatus { pending, accepted, rejected }
+
+enum BookingOutcome { booked, pendingApproval, full }
+
+class RideJoinRequest {
+  final String id;
+  final String passengerName;
+  final DateTime requestedAt;
+  final RideRequestStatus status;
+
+  const RideJoinRequest({
+    required this.id,
+    required this.passengerName,
+    required this.requestedAt,
+    this.status = RideRequestStatus.pending,
+  });
+
+  RideJoinRequest copyWith({
+    String? id,
+    String? passengerName,
+    DateTime? requestedAt,
+    RideRequestStatus? status,
+  }) {
+    return RideJoinRequest(
+      id: id ?? this.id,
+      passengerName: passengerName ?? this.passengerName,
+      requestedAt: requestedAt ?? this.requestedAt,
+      status: status ?? this.status,
+    );
+  }
+}
+
+class DriverManagedRide {
+  final RideModel ride;
+  final int seatsLeft;
+  final DriverListingStatus status;
+  final List<RideJoinRequest> requests;
+
+  const DriverManagedRide({
+    required this.ride,
+    required this.seatsLeft,
+    this.status = DriverListingStatus.published,
+    this.requests = const <RideJoinRequest>[],
+  });
+
+  RideModel get resolvedRide => ride.copyWith(seatsLeft: seatsLeft);
+
+  DriverManagedRide copyWith({
+    RideModel? ride,
+    int? seatsLeft,
+    DriverListingStatus? status,
+    List<RideJoinRequest>? requests,
+  }) {
+    return DriverManagedRide(
+      ride: ride ?? this.ride,
+      seatsLeft: seatsLeft ?? this.seatsLeft,
+      status: status ?? this.status,
+      requests: requests ?? this.requests,
+    );
+  }
+}
 
 /// Centralized app state — profile data, theme mode, and ride state.
 /// Injected via InheritedWidget so all screens can read/write.
@@ -115,6 +181,15 @@ class AppState extends ChangeNotifier {
   int _ridesAsDriver = 3;
   int get ridesAsDriver => _ridesAsDriver;
 
+  int _idCounter = DateTime.now().millisecondsSinceEpoch % 1000000;
+  final List<DriverManagedRide> _driverManagedRides = <DriverManagedRide>[];
+  List<DriverManagedRide> get driverManagedRides => List<DriverManagedRide>.unmodifiable(_driverManagedRides);
+
+  final List<RideModel> _passengerBookedRides = <RideModel>[];
+  List<RideModel> get passengerBookedRides => List<RideModel>.unmodifiable(_passengerBookedRides);
+
+  final Map<String, int> _marketSeatOverrides = <String, int>{};
+
   // --- Auth & permission mutators ---
   bool canSignInWithEmail(String email) {
     return email.trim().toLowerCase().endsWith('@$emailDomain');
@@ -223,6 +298,212 @@ class AppState extends ChangeNotifier {
     _totalRides++;
     notifyListeners();
     _persist();
+  }
+
+  String _nextId(String prefix) {
+    _idCounter += 1;
+    return '${prefix}_$_idCounter';
+  }
+
+  List<RideModel> marketplaceRides(List<RideModel> seedRides) {
+    final now = DateTime.now();
+    final merged = seedRides.map((ride) {
+      final seats = _marketSeatOverrides[ride.id];
+      if (seats == null) return ride;
+      return ride.copyWith(seatsLeft: seats);
+    }).where((ride) => ride.seatsLeft > 0).toList();
+
+    for (final managed in _driverManagedRides) {
+      final active = managed.status == DriverListingStatus.published;
+      final notDeparted = managed.ride.departureTime.isAfter(now.subtract(const Duration(minutes: 10)));
+      if (active && managed.seatsLeft > 0 && notDeparted) {
+        merged.add(managed.resolvedRide);
+      }
+    }
+
+    merged.sort((a, b) => a.departureTime.compareTo(b.departureTime));
+    return merged;
+  }
+
+  void publishDriverRide(RideModel ride) {
+    final managed = DriverManagedRide(
+      ride: ride,
+      seatsLeft: ride.seatsLeft,
+      status: DriverListingStatus.published,
+    );
+    _driverManagedRides.insert(0, managed);
+    _ridesAsDriver += 1;
+    notifyListeners();
+  }
+
+  void setDriverRideStatus({
+    required String rideId,
+    required DriverListingStatus status,
+  }) {
+    final index = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
+    if (index == -1) return;
+    _driverManagedRides[index] = _driverManagedRides[index].copyWith(status: status);
+    notifyListeners();
+  }
+
+  String addJoinRequest({
+    required String rideId,
+    required String passengerName,
+  }) {
+    final index = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
+    if (index == -1) return '';
+
+    final managed = _driverManagedRides[index];
+    final request = RideJoinRequest(
+      id: _nextId('req'),
+      passengerName: passengerName,
+      requestedAt: DateTime.now(),
+      status: RideRequestStatus.pending,
+    );
+
+    _driverManagedRides[index] = managed.copyWith(
+      requests: <RideJoinRequest>[request, ...managed.requests],
+    );
+    notifyListeners();
+    return request.id;
+  }
+
+  void acceptJoinRequest({
+    required String rideId,
+    required String requestId,
+  }) {
+    final rideIndex = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
+    if (rideIndex == -1) return;
+
+    final managed = _driverManagedRides[rideIndex];
+    final reqIndex = managed.requests.indexWhere((r) => r.id == requestId);
+    if (reqIndex == -1 || managed.seatsLeft <= 0) return;
+    if (managed.requests[reqIndex].status != RideRequestStatus.pending) return;
+
+    final updatedRequests = List<RideJoinRequest>.from(managed.requests);
+    updatedRequests[reqIndex] = updatedRequests[reqIndex].copyWith(
+      status: RideRequestStatus.accepted,
+    );
+
+    final nextSeats = managed.seatsLeft - 1;
+    _driverManagedRides[rideIndex] = managed.copyWith(
+      seatsLeft: nextSeats,
+      requests: updatedRequests,
+    );
+    _marketSeatOverrides[rideId] = nextSeats;
+
+    _passengerBookedRides.insert(
+      0,
+      managed.ride.copyWith(
+        seatsLeft: nextSeats,
+        isBooked: true,
+        driverName: managed.ride.driverDisplayName,
+        carPlate: managed.ride.carPlate ?? carPlate,
+      ),
+    );
+    notifyListeners();
+  }
+
+  void rejectJoinRequest({
+    required String rideId,
+    required String requestId,
+  }) {
+    final rideIndex = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
+    if (rideIndex == -1) return;
+
+    final managed = _driverManagedRides[rideIndex];
+    final reqIndex = managed.requests.indexWhere((r) => r.id == requestId);
+    if (reqIndex == -1) return;
+    if (managed.requests[reqIndex].status != RideRequestStatus.pending) return;
+
+    final updatedRequests = List<RideJoinRequest>.from(managed.requests);
+    updatedRequests[reqIndex] = updatedRequests[reqIndex].copyWith(
+      status: RideRequestStatus.rejected,
+    );
+
+    _driverManagedRides[rideIndex] = managed.copyWith(requests: updatedRequests);
+    notifyListeners();
+  }
+
+  BookingOutcome confirmPassengerBooking(RideModel ride) {
+    final managedIndex = _driverManagedRides.indexWhere((r) => r.ride.id == ride.id);
+    if (managedIndex != -1) {
+      final managed = _driverManagedRides[managedIndex];
+      if (managed.seatsLeft <= 0 || managed.status != DriverListingStatus.published) {
+        return BookingOutcome.full;
+      }
+      addJoinRequest(rideId: ride.id, passengerName: name);
+      return BookingOutcome.pendingApproval;
+    }
+
+    final currentSeats = _marketSeatOverrides[ride.id] ?? ride.seatsLeft;
+    if (currentSeats <= 0) return BookingOutcome.full;
+
+    final nextSeats = currentSeats - 1;
+    _marketSeatOverrides[ride.id] = nextSeats;
+    _passengerBookedRides.insert(
+      0,
+      ride.copyWith(
+        seatsLeft: nextSeats,
+        isBooked: true,
+        driverName: ride.driverDisplayName,
+        carPlate: ride.carPlate ?? 'WXY 1234',
+      ),
+    );
+    notifyListeners();
+    return BookingOutcome.booked;
+  }
+
+  bool get hasSeededDriverScenario =>
+      _driverManagedRides.any((r) => r.ride.id.startsWith('seed_driver_'));
+
+  void seedDriverTestingScenario() {
+    if (hasSeededDriverScenario) return;
+
+    final base = mockRidesPeninsular.first.copyWith(
+      id: 'seed_driver_${DateTime.now().millisecondsSinceEpoch}',
+      origin: currentLocationLabel,
+      pickupAddress: currentLocationLabel,
+      pickupLat: currentLocationLat,
+      pickupLng: currentLocationLng,
+      departureTime: DateTime.now().add(const Duration(minutes: 55)),
+      driverAlias: 'Verified Driver - $faculty',
+      driverSex: _sex == PersonSex.female ? DriverSex.female : DriverSex.male,
+      driverName: _name,
+      carModel: _carModel,
+      carPlate: _carPlate,
+      totalSeats: 4,
+      seatsLeft: 3,
+      isBooked: false,
+    );
+
+    final seeded = DriverManagedRide(
+      ride: base,
+      seatsLeft: 3,
+      status: DriverListingStatus.published,
+      requests: <RideJoinRequest>[
+        RideJoinRequest(
+          id: _nextId('req'),
+          passengerName: 'Student Aisyah',
+          requestedAt: DateTime.now().subtract(const Duration(minutes: 7)),
+          status: RideRequestStatus.pending,
+        ),
+        RideJoinRequest(
+          id: _nextId('req'),
+          passengerName: 'Student Firdaus',
+          requestedAt: DateTime.now().subtract(const Duration(minutes: 15)),
+          status: RideRequestStatus.accepted,
+        ),
+      ],
+    );
+
+    _driverManagedRides.insert(0, seeded);
+    notifyListeners();
+  }
+
+  void clearSeededDriverScenario() {
+    _driverManagedRides.removeWhere((r) => r.ride.id.startsWith('seed_driver_'));
+    notifyListeners();
   }
 
   Future<void> hydrate() async {

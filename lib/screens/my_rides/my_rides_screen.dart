@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:germana/core/app_state.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/data/mock_my_rides.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/widgets/driver_initials_avatar.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/section_label.dart';
 import 'package:germana/widgets/status_badge.dart';
@@ -16,10 +18,18 @@ class MyRidesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final state = AppStateProvider.of(context);
+    final mergedById = <String, RideModel>{
+      for (final ride in mockMyRides) ride.id: ride,
+      for (final ride in state.passengerBookedRides) ride.id: ride,
+    };
+    final merged = mergedById.values.toList()
+      ..sort((a, b) => b.departureTime.compareTo(a.departureTime));
+
     final upcoming =
-        mockMyRides.where((r) => r.departureTime.isAfter(DateTime.now())).toList();
+        merged.where((r) => r.departureTime.isAfter(DateTime.now())).toList();
     final past =
-        mockMyRides.where((r) => r.departureTime.isBefore(DateTime.now())).toList();
+        merged.where((r) => r.departureTime.isBefore(DateTime.now())).toList();
 
     return SafeArea(
       bottom: false,
@@ -130,19 +140,10 @@ class _UpcomingRideCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.accentBlue.withValues(alpha: 0.1),
-                  ),
-                  child: Center(
-                    child: Text(
-                      ride.driverName?.substring(0, 1) ?? '?',
-                      style: AppTextStyles.headline(context)
-                          .copyWith(color: AppColors.accentBlue),
-                    ),
-                  ),
+                DriverInitialsAvatar(
+                  ride: ride,
+                  size: 40,
+                  fontSize: 15,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

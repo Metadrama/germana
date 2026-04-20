@@ -52,6 +52,58 @@ class RideModel {
     this.rating,
   }) : pickupAddress = pickupAddress ?? origin;
 
+  RideModel copyWith({
+    String? id,
+    String? origin,
+    String? destination,
+    double? destinationLat,
+    double? destinationLng,
+    String? pickupAddress,
+    double? pickupLat,
+    double? pickupLng,
+    double? distanceKm,
+    String? driverAlias,
+    DriverSex? driverSex,
+    String? driverName,
+    String? carPlate,
+    String? carPhotoUrl,
+    String? carModel,
+    DateTime? departureTime,
+    int? totalSeats,
+    int? seatsLeft,
+    double? fuelShare,
+    double? tollShare,
+    double? platformFee,
+    bool? isBooked,
+    double? rating,
+  }) {
+    return RideModel(
+      id: id ?? this.id,
+      origin: origin ?? this.origin,
+      destination: destination ?? this.destination,
+      destinationLat: destinationLat ?? this.destinationLat,
+      destinationLng: destinationLng ?? this.destinationLng,
+      pickupAddress: pickupAddress ?? this.pickupAddress,
+      pickupLat: pickupLat ?? this.pickupLat,
+      pickupLng: pickupLng ?? this.pickupLng,
+      distanceKm: distanceKm ?? this.distanceKm,
+      driverAlias: driverAlias ?? this.driverAlias,
+      driverSex: driverSex ?? this.driverSex,
+      driverName: driverName ?? this.driverName,
+      carPlate: carPlate ?? this.carPlate,
+      carPhotoUrl: carPhotoUrl ?? this.carPhotoUrl,
+      carModel: carModel ?? this.carModel,
+      departureTime: departureTime ?? this.departureTime,
+      totalSeats: totalSeats ?? this.totalSeats,
+      seatsLeft: seatsLeft ?? this.seatsLeft,
+      fuelShare: fuelShare ?? this.fuelShare,
+      tollShare: tollShare ?? this.tollShare,
+      platformFee: platformFee ?? this.platformFee,
+      isBooked: isBooked ?? this.isBooked,
+      rating: rating ?? this.rating,
+    );
+  }
+
   double get totalPrice => fuelShare + tollShare + platformFee;
 
   bool get hasExplicitDriverName =>

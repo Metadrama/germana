@@ -3,6 +3,7 @@ import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/widgets/driver_initials_avatar.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/price_breakdown_row.dart';
 import 'package:germana/widgets/status_badge.dart';
@@ -28,39 +29,6 @@ class RideCard extends StatefulWidget {
 }
 
 class _RideCardState extends State<RideCard> {
-  Color _driverAvatarBackground() {
-    // Deterministic palette choice keeps each driver visually consistent.
-    final seed = widget.ride.driverDisplayName.toLowerCase().trim();
-    final index = seed.isEmpty ? 0 : seed.hashCode.abs();
-
-    if (widget.ride.driverSex == DriverSex.female) {
-      const femalePalette = <Color>[
-        Color(0xFFF6D9E7),
-        Color(0xFFEEDCFA),
-        Color(0xFFFFDDE2),
-        Color(0xFFEAD6F8),
-        Color(0xFFF9DCEB),
-      ];
-      return femalePalette[index % femalePalette.length];
-    }
-
-    const malePalette = <Color>[
-      Color(0xFFD7E9FF),
-      Color(0xFFDDEEFF),
-      Color(0xFFCFE5FF),
-      Color(0xFFE1EEFF),
-      Color(0xFFD8EFFF),
-    ];
-    return malePalette[index % malePalette.length];
-  }
-
-  Color _driverAvatarTextColor() {
-    if (widget.ride.driverSex == DriverSex.female) {
-      return const Color(0xFF6B3566);
-    }
-    return const Color(0xFF2C4F7A);
-  }
-
   String _formatTime(DateTime dt) {
     final diff = dt.difference(DateTime.now());
     if (diff.isNegative) return 'Departed';
@@ -133,21 +101,10 @@ class _RideCardState extends State<RideCard> {
 
                           return Row(
                             children: [
-                              Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _driverAvatarBackground(),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  widget.ride.driverInitials,
-                                  style: AppTextStyles.captionBold(context).copyWith(
-                                    color: _driverAvatarTextColor(),
-                                    fontSize: 11,
-                                  ),
-                                ),
+                              DriverInitialsAvatar(
+                                ride: widget.ride,
+                                size: 30,
+                                fontSize: 11,
                               ),
                               const SizedBox(width: 8),
                               Expanded(

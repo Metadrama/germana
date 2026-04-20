@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:germana/core/app_state.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/models/ride_model.dart';
@@ -25,11 +26,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
     await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
 
+    final state = AppStateProvider.of(context);
+    final outcome = state.confirmPassengerBooking(widget.ride);
+    if (outcome == BookingOutcome.full) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This trip is full or no longer open.')),
+      );
+      setState(() => _processing = false);
+      return;
+    }
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
         pageBuilder: (_, __, ___) =>
-            BookingConfirmedScreen(ride: widget.ride),
+            BookingConfirmedScreen(
+              ride: widget.ride,
+              pendingApproval: outcome == BookingOutcome.pendingApproval,
+            ),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
         },

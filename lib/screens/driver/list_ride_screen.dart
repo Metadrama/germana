@@ -3,6 +3,7 @@ import 'package:germana/core/app_state.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
+import 'package:germana/models/ride_model.dart';
 import 'package:germana/screens/explore/places_search_screen.dart';
 import 'package:germana/services/fair_rate_service.dart';
 import 'package:germana/services/location_service.dart';
@@ -279,6 +280,39 @@ class _ListRideScreenState extends State<ListRideScreen> {
       );
       return;
     }
+
+    final state = AppStateProvider.of(context);
+    final pricing = _pricingFor(cars);
+    final fallbackDistance = _routeDetails?.distanceKm ?? 0;
+    final fallbackToll = _routeDetails?.estimatedTollRm ?? 0;
+    final fuelRm = pricing?.fuelRm ?? 0;
+    final tollRm = pricing?.tollRm ?? fallbackToll;
+    const platformFee = 1.0;
+    final driverSex = state.sex == PersonSex.female ? DriverSex.female : DriverSex.male;
+
+    final ride = RideModel(
+      id: 'drv_${DateTime.now().millisecondsSinceEpoch}',
+      origin: _origin!.name,
+      destination: _destination!.name,
+      destinationLat: _destination!.lat,
+      destinationLng: _destination!.lng,
+      pickupAddress: _origin!.address,
+      pickupLat: _origin!.lat,
+      pickupLng: _origin!.lng,
+      distanceKm: fallbackDistance,
+      driverAlias: 'Verified Driver - ${state.faculty}',
+      driverSex: driverSex,
+      driverName: state.name,
+      carPlate: _plateController.text.trim(),
+      carModel: _activeCarName(cars),
+      departureTime: _departure,
+      totalSeats: _seatCount,
+      seatsLeft: _seatCount,
+      fuelShare: fuelRm,
+      tollShare: tollRm,
+      platformFee: platformFee,
+    );
+    state.publishDriverRide(ride);
 
     setState(() => _listed = true);
   }

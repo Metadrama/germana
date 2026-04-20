@@ -24,52 +24,52 @@ class GermanaColors {
 
   // Backgrounds
   Color get background =>
-      isDark ? const Color(0xFF0D1320) : const Color(0xFFF7F9FC);
+      isDark ? const Color(0xFF0A0A0E) : const Color(0xFFF7F9FC);
   Color get backgroundElevated =>
-      isDark ? const Color(0xFF151E30) : const Color(0xFFFFFFFF);
+      isDark ? const Color(0xFF121217) : const Color(0xFFFFFFFF);
 
   // Glass
   Color get glassSurface => isDark
-      ? const Color(0xD9273349)
+      ? const Color(0xD926262C)
       : const Color(0xF7FFFFFF);
   Color get glassBorder => isDark
-      ? const Color(0x4D8FA6D3)
+      ? const Color(0x4D727582)
       : const Color(0x331A2847);
   Color get glassBorderSubtle => isDark
-      ? const Color(0x338FA6D3)
+      ? const Color(0x33727582)
       : const Color(0x1F1A2847);
 
   // Text
   Color get textPrimary =>
-      isDark ? const Color(0xFFF2F5FB) : const Color(0xFF141C2B);
+      isDark ? const Color(0xFFF2F2F6) : const Color(0xFF141C2B);
   Color get textSecondary =>
-      isDark ? const Color(0xFFB7C2D9) : const Color(0xFF3A4760);
+      isDark ? const Color(0xFFB7B9C4) : const Color(0xFF3A4760);
   Color get textTertiary =>
-      isDark ? const Color(0xFF95A3C2) : const Color(0xFF5A667C);
+      isDark ? const Color(0xFF9194A2) : const Color(0xFF5A667C);
 
   // Ambient blobs
   Color get blobViolet => isDark
-      ? const Color(0x145D72C9)
+      ? const Color(0x103A3550)
       : const Color(0x145A9BFF);
   Color get blobSky => isDark
-      ? const Color(0x12338AD6)
+      ? const Color(0x0F2A3A48)
       : const Color(0x123E7ECC);
 
   // Dividers
   Color get divider =>
-      isDark ? const Color(0x336E7FA6) : const Color(0x1F23324F);
+      isDark ? const Color(0x334A4D59) : const Color(0x1F23324F);
 
   // Nav bar
   Color get navSurface => isDark
-      ? const Color(0xE01A2538)
+      ? const Color(0xE015151B)
       : const Color(0xF2FFFFFF);
   Color get navBorder => isDark
-      ? const Color(0x338FA6D3)
+      ? const Color(0x33535561)
       : const Color(0x291A2847);
 
   // Card fill (for non-glass elements)
   Color get cardFill => isDark
-      ? const Color(0xFF1C2033)
+      ? const Color(0xFF18191F)
       : Colors.white;
 }
 
@@ -251,8 +251,8 @@ ThemeData buildGermanaDarkTheme() {
     fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
     colorScheme: const ColorScheme.dark(
       primary: AppColors.accentBlue,
-      secondary: AppColors.accentSky,
-      surface: Color(0xFF0A0E1A),
+      secondary: AppColors.accentBlue,
+      surface: Color(0xFF101116),
       error: AppColors.accentRed,
     ),
     appBarTheme: const AppBarTheme(

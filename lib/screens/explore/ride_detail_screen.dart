@@ -9,6 +9,7 @@ import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/price_breakdown_row.dart';
 import 'package:germana/widgets/route_timeline.dart';
+import 'package:germana/widgets/driver_initials_avatar.dart';
 import 'package:germana/widgets/ride_map_snippet.dart';
 import 'package:germana/widgets/status_badge.dart';
 import 'package:germana/screens/explore/payment_screen.dart';
@@ -167,14 +168,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Container(
-                            width: 48, height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.accentBlue.withValues(alpha: 0.1),
-                            ),
-                            child: const Icon(Icons.person_rounded,
-                                color: AppColors.accentBlue, size: 24),
+                          DriverInitialsAvatar(
+                            ride: widget.ride,
+                            size: 48,
+                            fontSize: 17,
                           ),
                           const SizedBox(width: 12),
                           Expanded(

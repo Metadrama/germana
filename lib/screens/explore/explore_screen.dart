@@ -37,7 +37,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final state = AppStateProvider.of(context);
     final l10n = AppLocalizations.of(context);
     final discovery = RideDiscoveryService.discover(
-      rides: mockRidesPeninsular,
+      rides: state.marketplaceRides(mockRidesPeninsular),
       selectedFilter: _selectedFilter,
       currentLocationLat: state.currentLocationLat,
       currentLocationLng: state.currentLocationLng,

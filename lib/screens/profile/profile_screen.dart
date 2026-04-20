@@ -3,11 +3,8 @@ import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/l10n/app_localizations.dart';
-import 'package:germana/widgets/pill_button.dart';
 import 'package:germana/widgets/section_label.dart';
-import 'package:germana/screens/driver/list_ride_screen.dart';
 import 'package:germana/screens/profile/edit_profile_screen.dart';
-import 'package:germana/screens/profile/vehicle_chooser_screen.dart';
 
 /// Profile tab — reads from AppState, supports editing and dark mode toggle.
 class ProfileScreen extends StatelessWidget {
@@ -27,7 +24,7 @@ class ProfileScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l10n.driverInfo, style: AppTextStyles.display(context)),
+              Text(l10n.navProfile, style: AppTextStyles.display(context)),
               // Edit button
               IconButton(
                 onPressed: () {
@@ -157,69 +154,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Car profile
-          SectionLabel(label: l10n.yourCar),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const VehicleChooserScreen(),
-                ),
-              );
-            },
-            child: GlassBox(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      color: colors.textPrimary.withValues(alpha: 0.05),
-                    ),
-                    child: Icon(Icons.directions_car_rounded,
-                        size: 24, color: colors.textSecondary),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(state.carModel,
-                            style: AppTextStyles.headline(context)),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${state.carPlate} · ${state.carColor}',
-                          style: AppTextStyles.caption(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: colors.textTertiary),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // List a Ride CTA
-          PillButton(
-            label: l10n.listRide,
-            icon: Icons.add_rounded,
-            expand: true,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ListRideScreen(),
-                ),
-              );
-            },
           ),
 
           const SizedBox(height: 24),

@@ -9,8 +9,13 @@ import 'package:germana/widgets/pill_button.dart';
 /// Booking confirmed — driver identity reveal with blur → sharp animation.
 class BookingConfirmedScreen extends StatefulWidget {
   final RideModel ride;
+  final bool pendingApproval;
 
-  const BookingConfirmedScreen({super.key, required this.ride});
+  const BookingConfirmedScreen({
+    super.key,
+    required this.ride,
+    this.pendingApproval = false,
+  });
 
   @override
   State<BookingConfirmedScreen> createState() => _BookingConfirmedScreenState();
@@ -93,104 +98,127 @@ class _BookingConfirmedScreenState extends State<BookingConfirmedScreen>
 
               const SizedBox(height: 24),
 
-              Text(l10n.securedTitle, style: AppTextStyles.display(context)),
+              Text(
+                widget.pendingApproval ? 'Request sent' : l10n.securedTitle,
+                style: AppTextStyles.display(context),
+              ),
               const SizedBox(height: 8),
               Text(
-                '${widget.ride.origin} → ${widget.ride.destination}',
+                widget.pendingApproval
+                    ? 'Your request is pending driver approval.'
+                    : '${widget.ride.origin} → ${widget.ride.destination}',
                 style: AppTextStyles.bodySecondary(context),
                 textAlign: TextAlign.center,
               ),
 
               const SizedBox(height: 36),
 
-              // Driver reveal
-              AnimatedBuilder(
-                animation: _revealController,
-                builder: (context, child) {
-                  return SlideTransition(
-                    position: _slideUp,
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(
-                        sigmaX: _revealBlur.value,
-                        sigmaY: _revealBlur.value,
+              if (!widget.pendingApproval)
+                AnimatedBuilder(
+                  animation: _revealController,
+                  builder: (context, child) {
+                    return SlideTransition(
+                      position: _slideUp,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(
+                          sigmaX: _revealBlur.value,
+                          sigmaY: _revealBlur.value,
+                        ),
+                        child: Opacity(
+                          opacity: _revealController.value,
+                          child: child,
+                        ),
                       ),
-                      child: Opacity(
-                        opacity: _revealController.value,
-                        child: child,
-                      ),
-                    ),
-                  );
-                },
-                child: GlassBox(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
+                    );
+                  },
+                  child: GlassBox(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
                         Text(l10n.yourDriver,
-                          style: AppTextStyles.caption(context)),
-                      const SizedBox(height: 12),
+                            style: AppTextStyles.caption(context)),
+                        const SizedBox(height: 12),
 
-                      Container(
-                        width: 56, height: 56,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.accentBlue.withValues(alpha: 0.1),
-                        ),
-                        child: Center(
-                            child: Text('AF',
+                        Container(
+                          width: 56, height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.accentBlue.withValues(alpha: 0.1),
+                          ),
+                          child: Center(
+                            child: Text(
+                              widget.ride.driverInitials,
                               style: AppTextStyles.title(context)
-                                  .copyWith(color: AppColors.accentBlue)),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-                        Text('Ahmad Faris',
-                          style: AppTextStyles.title(context)),
-                      const SizedBox(height: 4),
-                        Text('Perodua Myvi · Putih',
-                          style: AppTextStyles.bodySecondary(context)),
-                      const SizedBox(height: 4),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: GermanaColors.of(context)
-                              .textPrimary
-                              .withValues(alpha: 0.06),
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.chip),
-                        ),
-                        child: Text('WXY 1234',
-                            style: AppTextStyles.captionBold(context)
-                                .copyWith(letterSpacing: 1.5)),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          PillButton(
-                            label: l10n.chatDriver,
-                            icon: Icons.chat_bubble_outline_rounded,
-                            isSmall: true,
-                            isOutlined: true,
-                            onPressed: () {},
+                                  .copyWith(color: AppColors.accentBlue),
+                            ),
                           ),
-                          const SizedBox(width: 12),
-                          PillButton(
-                            label: l10n.callDriver,
-                            icon: Icons.phone_outlined,
-                            isSmall: true,
-                            isOutlined: true,
-                            onPressed: () {},
+                        ),
+
+                        const SizedBox(height: 12),
+                        Text(widget.ride.driverDisplayName,
+                            style: AppTextStyles.title(context)),
+                        const SizedBox(height: 4),
+                        Text('${widget.ride.carModel} · White',
+                            style: AppTextStyles.bodySecondary(context)),
+                        const SizedBox(height: 4),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: GermanaColors.of(context)
+                                .textPrimary
+                                .withValues(alpha: 0.06),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.chip),
                           ),
-                        ],
+                            child: Text(widget.ride.carPlate ?? 'WXY 1234',
+                              style: AppTextStyles.captionBold(context)
+                                  .copyWith(letterSpacing: 1.5)),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            PillButton(
+                              label: l10n.chatDriver,
+                              icon: Icons.chat_bubble_outline_rounded,
+                              isSmall: true,
+                              isOutlined: true,
+                              onPressed: () {},
+                            ),
+                            const SizedBox(width: 12),
+                            PillButton(
+                              label: l10n.callDriver,
+                              icon: Icons.phone_outlined,
+                              isSmall: true,
+                              isOutlined: true,
+                              onPressed: () {},
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                GlassBox(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.hourglass_top_rounded, color: AppColors.accentAmber),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Driver will review your request soon. You will see updates in My Rides.',
+                          style: AppTextStyles.caption(context),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
 
               const Spacer(flex: 3),
 
