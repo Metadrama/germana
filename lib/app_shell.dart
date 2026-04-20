@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
-import 'package:germana/screens/driver/driver_dashboard_screen.dart';
+import 'package:germana/screens/driver/driver_hub_screen.dart';
 import 'package:germana/screens/driver/list_ride_screen.dart';
 import 'package:germana/screens/explore/explore_screen.dart';
 import 'package:germana/screens/ledger/ledger_screen.dart';
@@ -30,7 +30,7 @@ class _AppShellState extends State<AppShell> {
     if (role == UserRole.driver) {
       return const _ShellConfig(
         screens: [
-          DriverDashboardScreen(),
+          DriverHubScreen(),
           ListRideScreen(),
           ProfileScreen(),
         ],

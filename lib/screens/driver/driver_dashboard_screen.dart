@@ -251,14 +251,22 @@ class DriverDashboardScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             IconButton(
                               onPressed: () {
-                                state.acceptJoinRequest(rideId: ride.id, requestId: req.id);
+                                state.acceptJoinRequest(
+                                  rideId: ride.id,
+                                  requestId: req.id,
+                                  reason: 'Approved by driver for this student carpool trip.',
+                                );
                               },
                               icon: const Icon(Icons.check_rounded, color: AppColors.accentGreen),
                               tooltip: 'Accept',
                             ),
                             IconButton(
                               onPressed: () {
-                                state.rejectJoinRequest(rideId: ride.id, requestId: req.id);
+                                state.rejectJoinRequest(
+                                  rideId: ride.id,
+                                  requestId: req.id,
+                                  reason: 'Not approved due to seat planning or route fit.',
+                                );
                               },
                               icon: const Icon(Icons.close_rounded, color: AppColors.accentRed),
                               tooltip: 'Reject',
@@ -311,6 +319,9 @@ class DriverDashboardScreen extends StatelessWidget {
       case RideRequestStatus.rejected:
         label = 'Rejected';
         tint = AppColors.accentRed;
+      case RideRequestStatus.expired:
+        label = 'Expired';
+        tint = AppColors.feeNeutral;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

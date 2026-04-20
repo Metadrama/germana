@@ -1,5 +1,8 @@
 # Driver-Side Gap Tracker (MVP)
 
+Detailed major resurface implementation plan:
+- driver-major-resurface-implementation-plan.md
+
 ## Scope
 Focused on driver journey quality and production readiness:
 - list a ride
@@ -24,7 +27,7 @@ Focused on driver journey quality and production readiness:
 ### Underdeveloped / Missing
 
 #### P0: Core Driver Operations (Highest Risk)
-- No dedicated driver mode/dashboard to manage posted rides.
+- Driver mode/dashboard exists but remains lightweight and not yet a full command center.
 - No request inbox for approve/reject passenger requests.
 - No live seat inventory and waitlist handling per ride.
 - No trip status state machine for driver execution:
@@ -54,7 +57,7 @@ Focused on driver journey quality and production readiness:
 ## Evidence Pointers
 - Driver listing flow exists but ends at local listed state:
   - lib/screens/driver/list_ride_screen.dart
-- App shell does not expose a dedicated driver operations tab:
+- Driver mode is available, but IA is still minimal (no dedicated earnings/payout workspace):
   - lib/app_shell.dart
 - Ledger screen is history-only and currently mock-backed:
   - lib/screens/ledger/ledger_screen.dart
@@ -65,7 +68,7 @@ Focused on driver journey quality and production readiness:
 
 ### Sprint A: Driver Lifecycle Backbone (P0)
 1. Introduce DriverRide entity + status state machine.
-2. Add Driver Dashboard screen:
+2. Resurface the existing Driver Dashboard into a full Driver Hub:
    - Active Listings
    - Requests Pending
    - Trips Today
@@ -91,7 +94,7 @@ Focused on driver journey quality and production readiness:
 - No critical operation depends on mock-only local flags.
 
 ## Next Immediate Implementation Tasks
-1. Add Driver Dashboard screen and route entry from profile.
+1. Resurface Driver Dashboard into Driver Hub and add deep links from profile.
 2. Introduce in-memory DriverRideStore to replace local listed booleans.
 3. Wire request acceptance and seat decrement transitions.
 4. Add driver earnings summary panel backed by same store.

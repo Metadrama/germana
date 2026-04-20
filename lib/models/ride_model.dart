@@ -104,6 +104,66 @@ class RideModel {
     );
   }
 
+  factory RideModel.fromJson(Map<String, dynamic> json) {
+    return RideModel(
+      id: json['id'] as String? ?? '',
+      origin: json['origin'] as String? ?? '',
+      destination: json['destination'] as String? ?? '',
+      destinationLat: (json['destinationLat'] as num?)?.toDouble(),
+      destinationLng: (json['destinationLng'] as num?)?.toDouble(),
+      pickupAddress: json['pickupAddress'] as String?,
+      pickupLat: (json['pickupLat'] as num?)?.toDouble(),
+      pickupLng: (json['pickupLng'] as num?)?.toDouble(),
+      distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0,
+      driverAlias: json['driverAlias'] as String? ?? '',
+      driverSex: _driverSexFromString(json['driverSex'] as String?),
+      driverName: json['driverName'] as String?,
+      carPlate: json['carPlate'] as String?,
+      carPhotoUrl: json['carPhotoUrl'] as String?,
+      carModel: json['carModel'] as String? ?? '',
+      departureTime: DateTime.tryParse(json['departureTime'] as String? ?? '') ?? DateTime.now(),
+      totalSeats: (json['totalSeats'] as num?)?.toInt() ?? 0,
+      seatsLeft: (json['seatsLeft'] as num?)?.toInt() ?? 0,
+      fuelShare: (json['fuelShare'] as num?)?.toDouble() ?? 0,
+      tollShare: (json['tollShare'] as num?)?.toDouble() ?? 0,
+      platformFee: (json['platformFee'] as num?)?.toDouble() ?? 0,
+      isBooked: json['isBooked'] as bool? ?? false,
+      rating: (json['rating'] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'origin': origin,
+      'destination': destination,
+      'destinationLat': destinationLat,
+      'destinationLng': destinationLng,
+      'pickupAddress': pickupAddress,
+      'pickupLat': pickupLat,
+      'pickupLng': pickupLng,
+      'distanceKm': distanceKm,
+      'driverAlias': driverAlias,
+      'driverSex': driverSex.name,
+      'driverName': driverName,
+      'carPlate': carPlate,
+      'carPhotoUrl': carPhotoUrl,
+      'carModel': carModel,
+      'departureTime': departureTime.toIso8601String(),
+      'totalSeats': totalSeats,
+      'seatsLeft': seatsLeft,
+      'fuelShare': fuelShare,
+      'tollShare': tollShare,
+      'platformFee': platformFee,
+      'isBooked': isBooked,
+      'rating': rating,
+    };
+  }
+
+  static DriverSex _driverSexFromString(String? raw) {
+    return raw == DriverSex.female.name ? DriverSex.female : DriverSex.male;
+  }
+
   double get totalPrice => fuelShare + tollShare + platformFee;
 
   bool get hasExplicitDriverName =>
@@ -280,4 +340,41 @@ class LedgerEntry {
     required this.description,
     this.rideRoute,
   });
+
+  factory LedgerEntry.fromJson(Map<String, dynamic> json) {
+    return LedgerEntry(
+      id: json['id'] as String? ?? '',
+      type: _transactionTypeFromString(json['type'] as String?),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+      description: json['description'] as String? ?? '',
+      rideRoute: json['rideRoute'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'type': type.name,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'description': description,
+      'rideRoute': rideRoute,
+    };
+  }
+
+  static TransactionType _transactionTypeFromString(String? raw) {
+    switch (raw) {
+      case 'escrowHold':
+        return TransactionType.escrowHold;
+      case 'platformFee':
+        return TransactionType.platformFee;
+      case 'releasedToDriver':
+        return TransactionType.releasedToDriver;
+      case 'refund':
+        return TransactionType.refund;
+      default:
+        return TransactionType.escrowHold;
+    }
+  }
 }

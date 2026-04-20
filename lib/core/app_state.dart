@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:germana/data/mock_rides_peninsular.dart';
 import 'package:germana/models/ride_model.dart';
@@ -9,7 +11,7 @@ enum PersonSex { male, female }
 
 enum DriverListingStatus { draft, published, paused, inProgress, completed, cancelled }
 
-enum RideRequestStatus { pending, accepted, rejected }
+enum RideRequestStatus { pending, accepted, rejected, expired }
 
 enum BookingOutcome { booked, pendingApproval, full }
 
@@ -17,27 +19,77 @@ class RideJoinRequest {
   final String id;
   final String passengerName;
   final DateTime requestedAt;
+  final DateTime expiresAt;
+  final DateTime? decidedAt;
   final RideRequestStatus status;
+  final String? decisionReason;
 
   const RideJoinRequest({
     required this.id,
     required this.passengerName,
     required this.requestedAt,
+    required this.expiresAt,
+    this.decidedAt,
     this.status = RideRequestStatus.pending,
+    this.decisionReason,
   });
 
   RideJoinRequest copyWith({
     String? id,
     String? passengerName,
     DateTime? requestedAt,
+    DateTime? expiresAt,
+    DateTime? decidedAt,
     RideRequestStatus? status,
+    String? decisionReason,
   }) {
     return RideJoinRequest(
       id: id ?? this.id,
       passengerName: passengerName ?? this.passengerName,
       requestedAt: requestedAt ?? this.requestedAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      decidedAt: decidedAt ?? this.decidedAt,
       status: status ?? this.status,
+      decisionReason: decisionReason ?? this.decisionReason,
     );
+  }
+
+  factory RideJoinRequest.fromJson(Map<String, dynamic> json) {
+    return RideJoinRequest(
+      id: json['id'] as String? ?? '',
+      passengerName: json['passengerName'] as String? ?? '',
+      requestedAt: DateTime.tryParse(json['requestedAt'] as String? ?? '') ?? DateTime.now(),
+      expiresAt: DateTime.tryParse(json['expiresAt'] as String? ?? '') ?? DateTime.now().add(const Duration(minutes: 15)),
+      decidedAt: DateTime.tryParse(json['decidedAt'] as String? ?? ''),
+      status: _statusFromString(json['status'] as String?),
+      decisionReason: json['decisionReason'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'passengerName': passengerName,
+      'requestedAt': requestedAt.toIso8601String(),
+      'expiresAt': expiresAt.toIso8601String(),
+      'decidedAt': decidedAt?.toIso8601String(),
+      'status': status.name,
+      'decisionReason': decisionReason,
+    };
+  }
+
+  static RideRequestStatus _statusFromString(String? raw) {
+    switch (raw) {
+      case 'accepted':
+        return RideRequestStatus.accepted;
+      case 'rejected':
+        return RideRequestStatus.rejected;
+      case 'expired':
+        return RideRequestStatus.expired;
+      case 'pending':
+      default:
+        return RideRequestStatus.pending;
+    }
   }
 }
 
@@ -69,6 +121,46 @@ class DriverManagedRide {
       requests: requests ?? this.requests,
     );
   }
+
+  factory DriverManagedRide.fromJson(Map<String, dynamic> json) {
+    final rawRequests = json['requests'] as List<dynamic>? ?? const <dynamic>[];
+    return DriverManagedRide(
+      ride: RideModel.fromJson((json['ride'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{}).cast<String, dynamic>()),
+      seatsLeft: (json['seatsLeft'] as num?)?.toInt() ?? 0,
+      status: _statusFromString(json['status'] as String?),
+      requests: rawRequests
+          .whereType<Map<dynamic, dynamic>>()
+          .map((e) => RideJoinRequest.fromJson(e.cast<String, dynamic>()))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'ride': ride.toJson(),
+      'seatsLeft': seatsLeft,
+      'status': status.name,
+      'requests': requests.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  static DriverListingStatus _statusFromString(String? raw) {
+    switch (raw) {
+      case 'draft':
+        return DriverListingStatus.draft;
+      case 'paused':
+        return DriverListingStatus.paused;
+      case 'inProgress':
+        return DriverListingStatus.inProgress;
+      case 'completed':
+        return DriverListingStatus.completed;
+      case 'cancelled':
+        return DriverListingStatus.cancelled;
+      case 'published':
+      default:
+        return DriverListingStatus.published;
+    }
+  }
 }
 
 /// Centralized app state — profile data, theme mode, and ride state.
@@ -96,6 +188,10 @@ class AppState extends ChangeNotifier {
   static const _kCurrentLocationLng = 'current_location_lng';
   static const _kUserRole = 'user_role';
   static const _kLocaleCode = 'locale_code';
+  static const _kIdCounter = 'state_id_counter';
+  static const _kDriverManagedRides = 'driver_managed_rides';
+  static const _kPassengerBookedRides = 'passenger_booked_rides';
+  static const _kMarketSeatOverrides = 'market_seat_overrides';
 
   // --- Auth & onboarding ---
   bool _isAuthenticated = false;
@@ -182,6 +278,7 @@ class AppState extends ChangeNotifier {
   int get ridesAsDriver => _ridesAsDriver;
 
   int _idCounter = DateTime.now().millisecondsSinceEpoch % 1000000;
+  static const Duration _joinRequestTtl = Duration(minutes: 15);
   final List<DriverManagedRide> _driverManagedRides = <DriverManagedRide>[];
   List<DriverManagedRide> get driverManagedRides => List<DriverManagedRide>.unmodifiable(_driverManagedRides);
 
@@ -334,22 +431,34 @@ class AppState extends ChangeNotifier {
     _driverManagedRides.insert(0, managed);
     _ridesAsDriver += 1;
     notifyListeners();
+    _persist();
   }
 
   void setDriverRideStatus({
     required String rideId,
     required DriverListingStatus status,
   }) {
+    expirePendingJoinRequests();
     final index = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
     if (index == -1) return;
-    _driverManagedRides[index] = _driverManagedRides[index].copyWith(status: status);
+    final current = _driverManagedRides[index];
+    if (!_canTransitionStatus(current.status, status)) return;
+
+    if (status == DriverListingStatus.inProgress) {
+      final hasAccepted = current.requests.any((r) => r.status == RideRequestStatus.accepted);
+      if (!hasAccepted) return;
+    }
+
+    _driverManagedRides[index] = current.copyWith(status: status);
     notifyListeners();
+    _persist();
   }
 
   String addJoinRequest({
     required String rideId,
     required String passengerName,
   }) {
+    expirePendingJoinRequests();
     final index = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
     if (index == -1) return '';
 
@@ -358,6 +467,7 @@ class AppState extends ChangeNotifier {
       id: _nextId('req'),
       passengerName: passengerName,
       requestedAt: DateTime.now(),
+      expiresAt: DateTime.now().add(_joinRequestTtl),
       status: RideRequestStatus.pending,
     );
 
@@ -365,13 +475,16 @@ class AppState extends ChangeNotifier {
       requests: <RideJoinRequest>[request, ...managed.requests],
     );
     notifyListeners();
+    _persist();
     return request.id;
   }
 
   void acceptJoinRequest({
     required String rideId,
     required String requestId,
+    String? reason,
   }) {
+    expirePendingJoinRequests();
     final rideIndex = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
     if (rideIndex == -1) return;
 
@@ -383,6 +496,8 @@ class AppState extends ChangeNotifier {
     final updatedRequests = List<RideJoinRequest>.from(managed.requests);
     updatedRequests[reqIndex] = updatedRequests[reqIndex].copyWith(
       status: RideRequestStatus.accepted,
+      decidedAt: DateTime.now(),
+      decisionReason: reason,
     );
 
     final nextSeats = managed.seatsLeft - 1;
@@ -402,12 +517,15 @@ class AppState extends ChangeNotifier {
       ),
     );
     notifyListeners();
+    _persist();
   }
 
   void rejectJoinRequest({
     required String rideId,
     required String requestId,
+    String? reason,
   }) {
+    expirePendingJoinRequests();
     final rideIndex = _driverManagedRides.indexWhere((r) => r.ride.id == rideId);
     if (rideIndex == -1) return;
 
@@ -419,13 +537,17 @@ class AppState extends ChangeNotifier {
     final updatedRequests = List<RideJoinRequest>.from(managed.requests);
     updatedRequests[reqIndex] = updatedRequests[reqIndex].copyWith(
       status: RideRequestStatus.rejected,
+      decidedAt: DateTime.now(),
+      decisionReason: reason,
     );
 
     _driverManagedRides[rideIndex] = managed.copyWith(requests: updatedRequests);
     notifyListeners();
+    _persist();
   }
 
   BookingOutcome confirmPassengerBooking(RideModel ride) {
+    expirePendingJoinRequests();
     final managedIndex = _driverManagedRides.indexWhere((r) => r.ride.id == ride.id);
     if (managedIndex != -1) {
       final managed = _driverManagedRides[managedIndex];
@@ -451,11 +573,19 @@ class AppState extends ChangeNotifier {
       ),
     );
     notifyListeners();
+    _persist();
     return BookingOutcome.booked;
   }
 
   bool get hasSeededDriverScenario =>
       _driverManagedRides.any((r) => r.ride.id.startsWith('seed_driver_'));
+
+  void expirePendingJoinRequests({DateTime? now}) {
+    final changed = _sweepExpiredRequests(now: now);
+    if (!changed) return;
+    notifyListeners();
+    _persist();
+  }
 
   void seedDriverTestingScenario() {
     if (hasSeededDriverScenario) return;
@@ -486,12 +616,15 @@ class AppState extends ChangeNotifier {
           id: _nextId('req'),
           passengerName: 'Student Aisyah',
           requestedAt: DateTime.now().subtract(const Duration(minutes: 7)),
+          expiresAt: DateTime.now().add(const Duration(minutes: 8)),
           status: RideRequestStatus.pending,
         ),
         RideJoinRequest(
           id: _nextId('req'),
           passengerName: 'Student Firdaus',
           requestedAt: DateTime.now().subtract(const Duration(minutes: 15)),
+          expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+          decidedAt: DateTime.now().subtract(const Duration(minutes: 10)),
           status: RideRequestStatus.accepted,
         ),
       ],
@@ -499,11 +632,13 @@ class AppState extends ChangeNotifier {
 
     _driverManagedRides.insert(0, seeded);
     notifyListeners();
+    _persist();
   }
 
   void clearSeededDriverScenario() {
     _driverManagedRides.removeWhere((r) => r.ride.id.startsWith('seed_driver_'));
     notifyListeners();
+    _persist();
   }
 
   Future<void> hydrate() async {
@@ -540,6 +675,29 @@ class AppState extends ChangeNotifier {
     _userRole = _roleFromString(prefs.getString(_kUserRole));
     _locale = Locale(prefs.getString(_kLocaleCode) ?? _locale.languageCode);
 
+    _idCounter = prefs.getInt(_kIdCounter) ?? _idCounter;
+
+    final managedRaw = prefs.getString(_kDriverManagedRides);
+    if (managedRaw != null && managedRaw.isNotEmpty) {
+      _driverManagedRides
+        ..clear()
+        ..addAll(_decodeDriverManagedRides(managedRaw));
+    }
+
+    final bookedRaw = prefs.getString(_kPassengerBookedRides);
+    if (bookedRaw != null && bookedRaw.isNotEmpty) {
+      _passengerBookedRides
+        ..clear()
+        ..addAll(_decodePassengerBookedRides(bookedRaw));
+    }
+
+    final seatRaw = prefs.getString(_kMarketSeatOverrides);
+    if (seatRaw != null && seatRaw.isNotEmpty) {
+      _marketSeatOverrides
+        ..clear()
+        ..addAll(_decodeSeatOverrides(seatRaw));
+    }
+
     _isHydrated = true;
     notifyListeners();
   }
@@ -570,6 +728,111 @@ class AppState extends ChangeNotifier {
     await prefs.setDouble(_kCurrentLocationLng, _currentLocationLng);
     await prefs.setString(_kUserRole, _userRole.name);
     await prefs.setString(_kLocaleCode, _locale.languageCode);
+    await prefs.setInt(_kIdCounter, _idCounter);
+    await prefs.setString(
+      _kDriverManagedRides,
+      jsonEncode(_driverManagedRides.map((e) => e.toJson()).toList()),
+    );
+    await prefs.setString(
+      _kPassengerBookedRides,
+      jsonEncode(_passengerBookedRides.map((e) => e.toJson()).toList()),
+    );
+    await prefs.setString(
+      _kMarketSeatOverrides,
+      jsonEncode(_marketSeatOverrides),
+    );
+  }
+
+  List<DriverManagedRide> _decodeDriverManagedRides(String raw) {
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .whereType<Map<dynamic, dynamic>>()
+          .map((item) => DriverManagedRide.fromJson(item.cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      return const <DriverManagedRide>[];
+    }
+  }
+
+  List<RideModel> _decodePassengerBookedRides(String raw) {
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .whereType<Map<dynamic, dynamic>>()
+          .map((item) => RideModel.fromJson(item.cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      return const <RideModel>[];
+    }
+  }
+
+  Map<String, int> _decodeSeatOverrides(String raw) {
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded.map(
+        (key, value) => MapEntry(key, (value as num).toInt()),
+      );
+    } catch (_) {
+      return const <String, int>{};
+    }
+  }
+
+  bool _canTransitionStatus(
+    DriverListingStatus from,
+    DriverListingStatus to,
+  ) {
+    if (from == to) return true;
+
+    switch (from) {
+      case DriverListingStatus.draft:
+        return to == DriverListingStatus.published ||
+            to == DriverListingStatus.cancelled;
+      case DriverListingStatus.published:
+        return to == DriverListingStatus.paused ||
+            to == DriverListingStatus.inProgress ||
+            to == DriverListingStatus.cancelled;
+      case DriverListingStatus.paused:
+        return to == DriverListingStatus.published ||
+            to == DriverListingStatus.cancelled;
+      case DriverListingStatus.inProgress:
+        return to == DriverListingStatus.completed ||
+            to == DriverListingStatus.cancelled;
+      case DriverListingStatus.completed:
+      case DriverListingStatus.cancelled:
+        return false;
+    }
+  }
+
+  bool _sweepExpiredRequests({DateTime? now}) {
+    final ref = now ?? DateTime.now();
+    var changed = false;
+
+    for (var rideIndex = 0; rideIndex < _driverManagedRides.length; rideIndex++) {
+      final managed = _driverManagedRides[rideIndex];
+      var rideChanged = false;
+      final updatedRequests = managed.requests.map((request) {
+        if (request.status == RideRequestStatus.pending &&
+            request.expiresAt.isBefore(ref)) {
+          rideChanged = true;
+          changed = true;
+          return request.copyWith(
+            status: RideRequestStatus.expired,
+            decidedAt: ref,
+            decisionReason: 'Request expired before driver response.',
+          );
+        }
+        return request;
+      }).toList();
+
+      if (rideChanged) {
+        _driverManagedRides[rideIndex] = managed.copyWith(
+          requests: updatedRequests,
+        );
+      }
+    }
+
+    return changed;
   }
 
   ThemeMode _themeModeFromString(String? value) {

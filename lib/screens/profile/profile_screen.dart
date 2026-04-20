@@ -5,6 +5,7 @@ import 'package:germana/core/app_state.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/section_label.dart';
 import 'package:germana/screens/profile/edit_profile_screen.dart';
+import 'package:germana/screens/profile/vehicle_chooser_screen.dart';
 
 /// Profile tab — reads from AppState, supports editing and dark mode toggle.
 class ProfileScreen extends StatelessWidget {
@@ -169,6 +170,18 @@ class ProfileScreen extends StatelessWidget {
                 _ThemeToggleRow(),
                 Divider(height: 1, color: colors.divider),
                 _SettingsRow(
+                  icon: Icons.directions_car_filled_rounded,
+                  label: l10n.yourCar,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const VehicleChooserScreen(),
+                      ),
+                    );
+                  },
+                ),
+                Divider(height: 1, color: colors.divider),
+                _SettingsRow(
                   icon: Icons.notifications_outlined,
                   label: l10n.notifications,
                 ),
@@ -248,12 +261,19 @@ class _ThemeToggleRow extends StatelessWidget {
 class _SettingsRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _SettingsRow({required this.icon, required this.label});
+  final VoidCallback? onTap;
+
+  const _SettingsRow({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
     return ListTile(
+      onTap: onTap,
       leading: Icon(icon, size: 20, color: colors.textSecondary),
       title: Text(label,
           style: AppTextStyles.body(context).copyWith(fontSize: 15)),

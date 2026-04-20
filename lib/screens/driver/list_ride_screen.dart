@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
+import 'package:germana/data/car_database.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/models/ride_model.dart';
 import 'package:germana/screens/explore/places_search_screen.dart';
@@ -10,6 +11,7 @@ import 'package:germana/services/location_service.dart';
 import 'package:germana/services/malaysia_fuel_price_service.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/pill_button.dart';
+import 'package:germana/widgets/ride_map_snippet.dart';
 import 'package:intl/intl.dart';
 
 /// Comprehensive driver flow for publishing a ride.
@@ -45,6 +47,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
 
   bool _submitAttempted = false;
   bool _listed = false;
+  int _activeStep = 0;
 
   @override
   void initState() {
@@ -89,20 +92,39 @@ class _ListRideScreenState extends State<ListRideScreen> {
           'fuel': state.carFuelConsumption,
           'plate': state.carPlate,
           'fuelType': FuelType.ron95,
+          'seats': _resolveSeatsForModel(state.carModel, 4),
         },
         {
           'name': 'Perodua Axia',
           'fuel': 5.8,
           'plate': 'ABC 5678',
           'fuelType': FuelType.ron95,
+          'seats': _resolveSeatsForModel('Perodua Axia', 4),
         },
         {
           'name': 'Honda City',
           'fuel': 7.0,
           'plate': 'DEF 9012',
           'fuelType': FuelType.ron97,
+          'seats': _resolveSeatsForModel('Honda City', 4),
         },
       ];
+
+  int _resolveSeatsForModel(String modelName, int fallback) {
+    final normalized = modelName.trim().toLowerCase();
+    final matches = malaysiaCarDatabase.where(
+      (car) => car.displayName.toLowerCase() == normalized,
+    );
+    if (matches.isNotEmpty) return matches.first.passengerSeats;
+    return fallback;
+  }
+
+  int _selectedCarSeatCap(List<Map<String, dynamic>> cars) {
+    final dynamic raw = cars[_selectedCar]['seats'];
+    if (raw is int) return raw.clamp(1, 7);
+    if (raw is num) return raw.toInt().clamp(1, 7);
+    return 6;
+  }
 
   FuelType _selectedFuelType(List<Map<String, dynamic>> cars) {
     return (cars[_selectedCar]['fuelType'] as FuelType?) ?? FuelType.ron95;
@@ -256,6 +278,10 @@ class _ListRideScreenState extends State<ListRideScreen> {
     if (_seatCount < 1 || _seatCount > 6) {
       return 'Seat count must be between 1 and 6.';
     }
+    final seatCap = _selectedCarSeatCap(cars);
+    if (_seatCount > seatCap) {
+      return 'Selected car supports up to $seatCap passenger seats.';
+    }
 
     if (_useCustomCarName && _customCarController.text.trim().isEmpty) {
       return 'Enter a custom car model or turn off custom mode.';
@@ -317,6 +343,74 @@ class _ListRideScreenState extends State<ListRideScreen> {
     setState(() => _listed = true);
   }
 
+  String? _validateJourneyStep() {
+    if (_origin == null) return 'Choose a start location.';
+    if (_destination == null) return 'Choose a destination.';
+    if (_origin!.lat == _destination!.lat && _origin!.lng == _destination!.lng) {
+      return 'Origin and destination cannot be the same point.';
+    }
+    return null;
+  }
+
+  String? _validateVehicleStep(List<Map<String, dynamic>> cars) {
+    if (_seatCount < 1 || _seatCount > 6) {
+      return 'Seat count must be between 1 and 6.';
+    }
+
+    final seatCap = _selectedCarSeatCap(cars);
+    if (_seatCount > seatCap) {
+      return 'Selected car supports up to $seatCap passenger seats.';
+    }
+
+    if (_useCustomCarName && _customCarController.text.trim().isEmpty) {
+      return 'Enter a custom car model or turn off custom mode.';
+    }
+
+    if (_useSelectedCarPlate) {
+      _plateController.text = cars[_selectedCar]['plate'] as String;
+    }
+    if (!_isPlateValid) {
+      return 'Enter a valid license plate (example: WXY 1234).';
+    }
+
+    return null;
+  }
+
+  String? _validateStep(int step, List<Map<String, dynamic>> cars) {
+    switch (step) {
+      case 0:
+        return _validateJourneyStep();
+      case 1:
+        return _validateVehicleStep(cars);
+      case 2:
+      default:
+        return _validateDraft(cars);
+    }
+  }
+
+  bool _isStepUnlocked(int step, List<Map<String, dynamic>> cars) {
+    if (step == 0) return true;
+    if (step == 1) return _validateJourneyStep() == null;
+    return _validateJourneyStep() == null && _validateVehicleStep(cars) == null;
+  }
+
+  void _goNextStep(List<Map<String, dynamic>> cars) {
+    final error = _validateStep(_activeStep, cars);
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    if (_activeStep < 2) {
+      setState(() => _activeStep += 1);
+    }
+  }
+
+  void _goPreviousStep() {
+    if (_activeStep > 0) {
+      setState(() => _activeStep -= 1);
+    }
+  }
+
   Future<void> _calculateRoute() async {
     if (_origin != null && _destination != null) {
       setState(() => _isCalculatingRoute = true);
@@ -367,15 +461,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
               ),
             ),
             if (!_listed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                child: PillButton(
-                  label: 'Publish ride',
-                  icon: Icons.check_rounded,
-                  expand: true,
-                  onPressed: () => _onPublish(cars),
-                ),
-              ),
+              _buildBottomActions(context, cars),
           ],
         ),
       ),
@@ -383,15 +469,27 @@ class _ListRideScreenState extends State<ListRideScreen> {
   }
 
   Widget _buildForm(BuildContext context, List<Map<String, dynamic>> cars) {
-    final l10n = AppLocalizations.of(context);
-    final colors = GermanaColors.of(context);
-    final dateFmt = DateFormat('EEE, d MMM · h:mm a');
     final validationMessage = _submitAttempted ? _validateDraft(cars) : null;
-    final pricing = _pricingFor(cars);
+    final journeyReady = _validateJourneyStep() == null;
+    final vehicleReady = _validateVehicleStep(cars) == null;
+
+    Widget stepContent() {
+      switch (_activeStep) {
+        case 0:
+          return _buildJourneyStep(context, cars);
+        case 1:
+          return _buildVehicleAndPricingStep(context, cars);
+        case 2:
+        default:
+          return _buildReviewStep(context, cars);
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildStepNavigator(context, cars, journeyReady: journeyReady, vehicleReady: vehicleReady),
+        const SizedBox(height: 14),
         if (validationMessage != null) ...[
           GlassBox(
             padding: const EdgeInsets.all(12),
@@ -410,7 +508,137 @@ class _ListRideScreenState extends State<ListRideScreen> {
           ),
           const SizedBox(height: 16),
         ],
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 260),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: KeyedSubtree(
+            key: ValueKey(_activeStep),
+            child: stepContent(),
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildStepNavigator(
+    BuildContext context,
+    List<Map<String, dynamic>> cars, {
+    required bool journeyReady,
+    required bool vehicleReady,
+  }) {
+    final colors = GermanaColors.of(context);
+    const titles = <String>['Journey', 'Vehicle', 'Review'];
+    const icons = <IconData>[
+      Icons.route_rounded,
+      Icons.directions_car_filled_rounded,
+      Icons.visibility_outlined,
+    ];
+
+    final progress = (_activeStep + 1) / 3;
+
+    return GlassBox(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Step ${_activeStep + 1} of 3',
+                style: AppTextStyles.captionBold(context),
+              ),
+              const Spacer(),
+              Text(
+                _activeStep == 2
+                    ? 'Ready to publish'
+                    : _activeStep == 1
+                        ? 'Vehicle and pricing'
+                        : 'Build your route',
+                style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: colors.glassSurface,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: List<Widget>.generate(titles.length, (index) {
+              final isActive = _activeStep == index;
+              final unlocked = _isStepUnlocked(index, cars);
+              final done = (index == 0 && journeyReady) || (index == 1 && vehicleReady) || (index < _activeStep);
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index == 2 ? 0 : 8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: unlocked
+                        ? () => setState(() => _activeStep = index)
+                        : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: isActive
+                            ? AppColors.accentBlue.withValues(alpha: 0.16)
+                            : colors.glassSurface,
+                        border: Border.all(
+                          color: isActive
+                              ? AppColors.accentBlue.withValues(alpha: 0.5)
+                              : colors.glassBorderSubtle,
+                          width: 0.9,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            done ? Icons.check_rounded : icons[index],
+                            size: 15,
+                            color: isActive ? AppColors.accentBlue : colors.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              titles[index],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption(context).copyWith(
+                                color: isActive ? AppColors.accentBlue : colors.textSecondary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJourneyStep(BuildContext context, List<Map<String, dynamic>> cars) {
+    final l10n = AppLocalizations.of(context);
+    final colors = GermanaColors.of(context);
+    final dateFmt = DateFormat('EEE, d MMM · h:mm a');
+    final appState = AppStateProvider.of(context);
+
+    return Column(
+      children: [
         _sectionCard(
           context,
           title: 'Journey',
@@ -463,12 +691,24 @@ class _ListRideScreenState extends State<ListRideScreen> {
                   ),
                 ],
               ),
+              if (_origin != null && _destination != null) ...[
+                const SizedBox(height: 12),
+                RideMapSnippet(
+                  pickupLabel: _origin!.name,
+                  destinationLabel: _destination!.name,
+                  pickupLat: _origin!.lat,
+                  pickupLng: _origin!.lng,
+                  destinationLat: _destination!.lat,
+                  destinationLng: _destination!.lng,
+                  userLat: appState.currentLocationLat,
+                  userLng: appState.currentLocationLng,
+                  height: 190,
+                ),
+              ],
             ],
           ),
         ),
-
         const SizedBox(height: 16),
-
         _sectionCard(
           context,
           title: 'Pickup plan',
@@ -529,9 +769,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        onPressed: () {
-                          setState(() => _pickupPoints.removeAt(idx));
-                        },
+                        onPressed: () => setState(() => _pickupPoints.removeAt(idx)),
                         icon: const Icon(Icons.close_rounded),
                       ),
                     ],
@@ -548,9 +786,17 @@ class _ListRideScreenState extends State<ListRideScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
 
-        const SizedBox(height: 16),
+  Widget _buildVehicleAndPricingStep(BuildContext context, List<Map<String, dynamic>> cars) {
+    final l10n = AppLocalizations.of(context);
+    final colors = GermanaColors.of(context);
+    final pricing = _pricingFor(cars);
 
+    return Column(
+      children: [
         _sectionCard(
           context,
           title: 'Vehicle details',
@@ -574,6 +820,10 @@ class _ListRideScreenState extends State<ListRideScreen> {
                           _selectedCar = index;
                           if (_useSelectedCarPlate) {
                             _plateController.text = car['plate'] as String;
+                          }
+                          final cap = _selectedCarSeatCap(cars);
+                          if (_seatCount > cap) {
+                            _seatCount = cap;
                           }
                         });
                       },
@@ -641,9 +891,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
             ],
           ),
         ),
-
         const SizedBox(height: 16),
-
         _sectionCard(
           context,
           title: 'Capacity and fair pricing',
@@ -656,56 +904,42 @@ class _ListRideScreenState extends State<ListRideScreen> {
                   Text('Seats available', style: AppTextStyles.captionBold(context)),
                   const Spacer(),
                   IconButton(
-                    onPressed: _seatCount > 1
-                        ? () => setState(() => _seatCount--)
-                        : null,
+                    onPressed: _seatCount > 1 ? () => setState(() => _seatCount--) : null,
                     icon: const Icon(Icons.remove_circle_outline_rounded),
                   ),
                   Text('$_seatCount', style: AppTextStyles.headline(context)),
                   IconButton(
                     onPressed: _seatCount < 6
-                        ? () => setState(() => _seatCount++)
+                        ? () {
+                            final cap = _selectedCarSeatCap(cars);
+                            if (_seatCount < cap) {
+                              setState(() => _seatCount++);
+                            }
+                          }
                         : null,
                     icon: const Icon(Icons.add_circle_outline_rounded),
                   ),
                 ],
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Vehicle seat cap: ${_selectedCarSeatCap(cars)} passengers',
+                  style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
+                ),
+              ),
               const SizedBox(height: 8),
-              _calcRow(
-                context,
-                'Fuel tracker',
-                _fuelPriceLabel(cars),
-              ),
+              _calcRow(context, 'Fuel tracker', _fuelPriceLabel(cars)),
               const SizedBox(height: 6),
-              _calcRow(
-                context,
-                l10n.fuelContributionRon,
-                'RM ${(pricing?.fuelRm ?? 0).toStringAsFixed(2)}',
-              ),
+              _calcRow(context, l10n.fuelContributionRon, 'RM ${(pricing?.fuelRm ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _calcRow(
-                context,
-                l10n.tollShareLabel,
-                'RM ${(pricing?.tollRm ?? 0).toStringAsFixed(2)}',
-              ),
+              _calcRow(context, l10n.tollShareLabel, 'RM ${(pricing?.tollRm ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _calcRow(
-                context,
-                'Maintenance + wear',
-                'RM ${(pricing?.maintenanceRm ?? 0).toStringAsFixed(2)}',
-              ),
+              _calcRow(context, 'Maintenance + wear', 'RM ${(pricing?.maintenanceRm ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _calcRow(
-                context,
-                'Pickup/parking misc',
-                'RM ${(pricing?.incidentalsRm ?? 0).toStringAsFixed(2)}',
-              ),
+              _calcRow(context, 'Pickup/parking misc', 'RM ${(pricing?.incidentalsRm ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _calcRow(
-                context,
-                'Driver safety margin (6%)',
-                'RM ${(pricing?.driverSafetyMarginRm ?? 0).toStringAsFixed(2)}',
-              ),
+              _calcRow(context, 'Driver safety margin (6%)', 'RM ${(pricing?.driverSafetyMarginRm ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
               _calcRow(context, l10n.seatsLabel, '$_seatCount'),
               Divider(height: 20, color: colors.divider),
@@ -736,9 +970,15 @@ class _ListRideScreenState extends State<ListRideScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
 
-        const SizedBox(height: 16),
+  Widget _buildReviewStep(BuildContext context, List<Map<String, dynamic>> cars) {
+    final pricing = _pricingFor(cars);
 
+    return Column(
+      children: [
         _sectionCard(
           context,
           title: 'Publish preview',
@@ -749,20 +989,14 @@ class _ListRideScreenState extends State<ListRideScreen> {
             children: [
               _calcRow(context, 'Route', '${_origin?.name ?? '-'} -> ${_destination?.name ?? '-'}'),
               const SizedBox(height: 6),
-              _calcRow(
-                context,
-                'Pickup points',
-                '${_pickupPoints.length} / $_maxPickupPoints configured',
-              ),
+              _calcRow(context, 'Pickup points', '${_pickupPoints.length} / $_maxPickupPoints configured'),
               const SizedBox(height: 6),
               _calcRow(context, 'Vehicle', _activeCarName(cars)),
               const SizedBox(height: 6),
               _calcRow(
                 context,
                 'Plate',
-                _plateController.text.trim().isEmpty
-                    ? '-'
-                    : _plateController.text.trim(),
+                _plateController.text.trim().isEmpty ? '-' : _plateController.text.trim(),
               ),
               const SizedBox(height: 6),
               _calcRow(context, 'Seats', '$_seatCount'),
@@ -770,14 +1004,47 @@ class _ListRideScreenState extends State<ListRideScreen> {
               _calcRow(
                 context,
                 'Suggested fare',
-                pricing == null
-                    ? 'Set route first'
-                    : 'RM ${pricing.perSeatRecommendedRm.toStringAsFixed(2)} per seat',
+                pricing == null ? 'Set route first' : 'RM ${pricing.perSeatRecommendedRm.toStringAsFixed(2)} per seat',
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBottomActions(BuildContext context, List<Map<String, dynamic>> cars) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Row(
+        children: [
+          if (_activeStep > 0)
+            Expanded(
+              child: PillButton(
+                label: 'Back',
+                icon: Icons.arrow_back_rounded,
+                isOutlined: true,
+                onPressed: _goPreviousStep,
+              ),
+            ),
+          if (_activeStep > 0) const SizedBox(width: 10),
+          Expanded(
+            flex: _activeStep == 0 ? 1 : 2,
+            child: PillButton(
+              label: _activeStep == 2 ? 'Publish ride' : 'Continue',
+              icon: _activeStep == 2 ? Icons.check_rounded : Icons.arrow_forward_rounded,
+              expand: true,
+              onPressed: () {
+                if (_activeStep == 2) {
+                  _onPublish(cars);
+                } else {
+                  _goNextStep(cars);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
