@@ -1066,7 +1066,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
 
   Widget _buildBottomActions(BuildContext context, List<Map<String, dynamic>> cars) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
       child: Row(
         children: [
           if (_activeStep > 0)

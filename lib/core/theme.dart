@@ -24,53 +24,53 @@ class GermanaColors {
 
   // Backgrounds
   Color get background =>
-      isDark ? const Color(0xFF0A0A0E) : const Color(0xFFF7F9FC);
+      isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
   Color get backgroundElevated =>
-      isDark ? const Color(0xFF121217) : const Color(0xFFFFFFFF);
+      isDark ? const Color(0xFF1C1C1E) : const Color(0xFFFFFFFF);
 
-  // Glass
+  // Glass - High blur, low opacity
   Color get glassSurface => isDark
-      ? const Color(0xD926262C)
-      : const Color(0xF7FFFFFF);
+      ? const Color(0x28000000)
+      : const Color(0x38FFFFFF);
   Color get glassBorder => isDark
-      ? const Color(0x4D727582)
-      : const Color(0x331A2847);
+      ? const Color(0x15FFFFFF)
+      : const Color(0x1A000000);
   Color get glassBorderSubtle => isDark
-      ? const Color(0x33727582)
-      : const Color(0x1F1A2847);
+      ? const Color(0x0AFFFFFF)
+      : const Color(0x0A000000);
 
   // Text
   Color get textPrimary =>
-      isDark ? const Color(0xFFF2F2F6) : const Color(0xFF141C2B);
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
   Color get textSecondary =>
-      isDark ? const Color(0xFFB7B9C4) : const Color(0xFF3A4760);
+      isDark ? const Color(0x99EBEBF5) : const Color(0x993C3C43);
   Color get textTertiary =>
-      isDark ? const Color(0xFF9194A2) : const Color(0xFF5A667C);
+      isDark ? const Color(0x4DEBEBF5) : const Color(0x4D3C3C43);
 
   // Ambient blobs
   Color get blobViolet => isDark
-      ? const Color(0x103A3550)
-      : const Color(0x145A9BFF);
+      ? const Color(0x405E5CE6)
+      : const Color(0x205856D6);
   Color get blobSky => isDark
-      ? const Color(0x0F2A3A48)
-      : const Color(0x123E7ECC);
+      ? const Color(0x3064D2FF)
+      : const Color(0x185AC8FA);
 
   // Dividers
   Color get divider =>
-      isDark ? const Color(0x334A4D59) : const Color(0x1F23324F);
+      isDark ? const Color(0x33545458) : const Color(0x2E3C3C43);
 
   // Nav bar
   Color get navSurface => isDark
-      ? const Color(0xE015151B)
-      : const Color(0xF2FFFFFF);
+      ? const Color(0x551C1C1E)
+      : const Color(0x88F2F2F7);
   Color get navBorder => isDark
-      ? const Color(0x33535561)
-      : const Color(0x291A2847);
+      ? const Color(0x1AFFFFFF)
+      : const Color(0x1A000000);
 
   // Card fill (for non-glass elements)
   Color get cardFill => isDark
-      ? const Color(0xFF18191F)
-      : Colors.white;
+      ? const Color(0xFF1C1C1E)
+      : const Color(0xFFFFFFFF);
 }
 
 // ─────────────────────────────────────────────
@@ -81,28 +81,28 @@ class AppColors {
   AppColors._();
 
   // Accent
-  static const Color accentBlue = Color(0xFF007AFF);
-  static const Color accentGreen = Color(0xFF34C759);
-  static const Color accentSky = Color(0xFF5AC8FA);
+  static const Color accentBlue = Color(0xFF0A84FF);
+  static const Color accentGreen = Color(0xFF30D158);
+  static const Color accentSky = Color(0xFF64D2FF);
   static const Color accentAmber = Color(0xFFFF9F0A);
-  static const Color accentRed = Color(0xFFFF3B30);
+  static const Color accentRed = Color(0xFFFF453A);
   static const Color textOnAccent = Color(0xFFFFFFFF);
 
   // Route visual semantics
-  static const Color routeStartBlue = Color(0xFF2D8CFF);
-  static const Color routeEndBlue = Color(0xFF2D8CFF);
-  static const Color routeStartRed = Color(0xFFFF3B30);
-  static const Color routeEndNeutralDark = Color(0xFFBCC5D6);
-  static const Color routeEndNeutralLight = Color(0xFF9BA4B4);
+  static const Color routeStartBlue = Color(0xFF0A84FF);
+  static const Color routeEndBlue = Color(0xFF0A84FF);
+  static const Color routeStartRed = Color(0xFFFF453A);
+  static const Color routeEndNeutralDark = Color(0xFF8E8E93);
+  static const Color routeEndNeutralLight = Color(0xFF8E8E93);
 
   // TnG Green — Malaysia specific
   static const Color tngBlue = Color(0xFF005ABB);
 
   // Semantic
-  static const Color escrowBlue = Color(0xFF007AFF);
-  static const Color releasedGreen = Color(0xFF34C759);
+  static const Color escrowBlue = Color(0xFF0A84FF);
+  static const Color releasedGreen = Color(0xFF30D158);
   static const Color refundAmber = Color(0xFFFF9F0A);
-  static const Color feeNeutral = Color(0xFFC7C7CC);
+  static const Color feeNeutral = Color(0xFF8E8E93);
 }
 
 // ─────────────────────────────────────────────
@@ -128,9 +128,9 @@ class AppRadius {
 
 class AppBlur {
   AppBlur._();
-  static const double heavy = 24.0;
-  static const double medium = 16.0;
-  static const double subtle = 12.0;
+  static const double heavy = 40.0;
+  static const double medium = 24.0;
+  static const double subtle = 16.0;
 }
 
 // ─────────────────────────────────────────────
@@ -228,7 +228,7 @@ ThemeData buildGermanaLightTheme() {
     colorScheme: const ColorScheme.light(
       primary: AppColors.accentBlue,
       secondary: AppColors.accentSky,
-      surface: Color(0xFFF0F4FF),
+      surface: Color(0xFFF2F2F7),
       error: AppColors.accentRed,
     ),
     appBarTheme: const AppBarTheme(
@@ -252,7 +252,7 @@ ThemeData buildGermanaDarkTheme() {
     colorScheme: const ColorScheme.dark(
       primary: AppColors.accentBlue,
       secondary: AppColors.accentBlue,
-      surface: Color(0xFF101116),
+      surface: Color(0xFF000000),
       error: AppColors.accentRed,
     ),
     appBarTheme: const AppBarTheme(

@@ -81,6 +81,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
+  cupertino_native:
+    dependency: "direct main"
+    description:
+      name: cupertino_native
+      sha256: "5f42e85a091797afb86bb30a25fffd7188335de97278fa4bb80c0f564c874e89"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
   fake_async:
     dependency: transitive
     description:
@@ -317,6 +325,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.0"
+  liquid_glass_easy:
+    dependency: "direct main"
+    description:
+      name: liquid_glass_easy
+      sha256: d6c32f2e1b1002c5c1739d2bfc8ee73f0716f03b4bde20390c4fc84d99b30138
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   logging:
     dependency: transitive
     description:

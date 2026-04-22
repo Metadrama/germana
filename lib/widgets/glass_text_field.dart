@@ -1,8 +1,7 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 
-/// Frosted glass text input field — adaptive to theme brightness.
+/// Clean, native-feeling text input field (similar to CupertinoSearchTextField).
 class GlassTextField extends StatelessWidget {
   final String hint;
   final IconData? prefixIcon;
@@ -31,49 +30,45 @@ class GlassTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.isDark
-                ? colors.backgroundElevated.withValues(alpha: 0.72)
-                : colors.glassSurface,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(
-              color: colors.glassBorderSubtle,
-              width: 0.9,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.isDark
+            ? const Color(0xFF767680).withValues(alpha: 0.24)
+            : const Color(0xFF767680).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10), // Native Cupertino radius
+      ),
+      child: TextField(
+        controller: controller,
+        readOnly: readOnly,
+        onTap: onTap,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        style: AppTextStyles.body(context),
+        cursorColor: AppColors.accentBlue,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTextStyles.bodySecondary(context).copyWith(
+            color: colors.isDark 
+              ? const Color(0xFFEBEBF5).withValues(alpha: 0.6)
+              : const Color(0xFF3C3C43).withValues(alpha: 0.6),
           ),
-          child: TextField(
-            controller: controller,
-            readOnly: readOnly,
-            onTap: onTap,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            style: AppTextStyles.body(context),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTextStyles.bodySecondary(context),
-              prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: colors.textSecondary, size: 20)
-                  : null,
-              suffixIcon: suffixIcon != null
-                  ? GestureDetector(
-                      onTap: onSuffixTap,
-                      child: Icon(suffixIcon, color: colors.textSecondary, size: 20),
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 14,
-              ),
-            ),
+          prefixIcon: prefixIcon != null
+              ? Icon(prefixIcon, color: colors.textSecondary, size: 20)
+              : null,
+          suffixIcon: suffixIcon != null
+              ? GestureDetector(
+                  onTap: onSuffixTap,
+                  child: Icon(suffixIcon, color: colors.textSecondary, size: 20),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10,
           ),
         ),
       ),
     );
   }
 }
+

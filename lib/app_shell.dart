@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:germana/core/app_state.dart';
 import 'package:germana/core/theme.dart';
@@ -8,9 +9,9 @@ import 'package:germana/screens/driver/list_ride_screen.dart';
 import 'package:germana/screens/explore/explore_screen.dart';
 import 'package:germana/screens/ledger/ledger_screen.dart';
 import 'package:germana/screens/profile/profile_screen.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 
 /// Persistent shell with floating frosted pill navigation bar.
-/// Adaptive glass colors for dark/light mode.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -36,18 +37,18 @@ class _AppShellState extends State<AppShell> {
         ],
         navItems: [
           _NavItem(
-            icon: Icons.dashboard_outlined,
-            activeIcon: Icons.dashboard_rounded,
+            icon: CupertinoIcons.square_grid_2x2,
+            activeIcon: CupertinoIcons.square_grid_2x2_fill,
             label: 'Dashboard',
           ),
           _NavItem(
-            icon: Icons.add_circle_outline_rounded,
-            activeIcon: Icons.add_circle_rounded,
+            icon: CupertinoIcons.add_circled,
+            activeIcon: CupertinoIcons.add_circled_solid,
             label: 'List',
           ),
           _NavItem(
-            icon: Icons.person_outline_rounded,
-            activeIcon: Icons.person_rounded,
+            icon: CupertinoIcons.person_crop_circle,
+            activeIcon: CupertinoIcons.person_crop_circle_fill,
             label: 'Profile',
           ),
         ],
@@ -62,18 +63,18 @@ class _AppShellState extends State<AppShell> {
       ],
       navItems: [
         _NavItem(
-          icon: Icons.home_outlined,
-          activeIcon: Icons.home_rounded,
+          icon: CupertinoIcons.house,
+          activeIcon: CupertinoIcons.house_fill,
           label: l10n.navRides,
         ),
         _NavItem(
-          icon: Icons.receipt_long_outlined,
-          activeIcon: Icons.receipt_long_rounded,
+          icon: CupertinoIcons.clock,
+          activeIcon: CupertinoIcons.clock_solid,
           label: l10n.navHistory,
         ),
         _NavItem(
-          icon: Icons.person_outline_rounded,
-          activeIcon: Icons.person_rounded,
+          icon: CupertinoIcons.person_crop_circle,
+          activeIcon: CupertinoIcons.person_crop_circle_fill,
           label: l10n.navProfile,
         ),
       ],
@@ -90,28 +91,123 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            bottom: 84 + MediaQuery.paddingOf(context).bottom,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: KeyedSubtree(
-                key: ValueKey(role),
-                child: IndexedStack(
-                  index: activeIndex,
-                  children: config.screens,
-                ),
-              ),
+      body: LiquidGlassView(
+        useSync: true,
+        pixelRatio: 0.8, // Recommended for full screen backgrounds
+        refreshRate: LiquidGlassRefreshRate.medium,
+        backgroundWidget: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: KeyedSubtree(
+            key: ValueKey(role),
+            child: IndexedStack(
+              index: activeIndex,
+              children: config.screens,
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildNavBar(context, config.navItems),
-          ),
+        ),
+        children: [
+          _buildNavBarLens(context, config.navItems),
         ],
+      ),
+    );
+  }
+
+  LiquidGlass _buildNavBarLens(BuildContext context, List<_NavItem> navItems) {
+    final colors = GermanaColors.of(context);
+    final isDark = colors.isDark;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+
+    return LiquidGlass(
+      height: 64,
+      width: 260, // Fixed width
+      position: LiquidGlassAlignPosition(
+        alignment: Alignment.bottomCenter,
+        margin: EdgeInsets.only(bottom: bottomPadding + 16),
+      ),
+      // Lower blur to actually let the refraction be visible and crisp
+      blur: const LiquidGlassBlur(sigmaX: 10, sigmaY: 10),
+      
+      // Extremely subtle tint on the glass itself
+      color: isDark 
+          ? Colors.black.withValues(alpha: 0.15) 
+          : Colors.white.withValues(alpha: 0.15),
+          
+      refractionMode: LiquidGlassRefractionMode.shapeRefraction,
+      
+      // Bring back the aggressive physical glass properties
+      distortion: 0.15, // The bending strength
+      distortionWidth: 16.0, // Restrict the heavy bending to a beautiful edge rim
+      magnification: 1.1, // Zoom in slightly like a solid glass block
+      chromaticAberration: 0.005, // Add that physical color splitting at the refracted edges
+      
+      shape: const RoundedRectangleShape(cornerRadius: 100),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          // Completely transparent here so the LiquidGlass shader does all the work
+          color: Colors.transparent, 
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.5),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(navItems.length, (index) {
+            final item = navItems[index];
+            final isActive = index == _currentIndex;
+            final activeColor = AppColors.accentBlue;
+            final inactiveColor = isDark ? Colors.white : const Color(0xFF3C3C43);
+            final color = isActive ? activeColor : inactiveColor;
+
+            return GestureDetector(
+              key: _navItemKeys[index],
+              onTap: () => setState(() => _currentIndex = index),
+              onLongPress: index == 2
+                  ? () => _showProfileQuickSwitcher(context)
+                  : null,
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                height: 52,
+                constraints: const BoxConstraints(minWidth: 76),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.08))
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isActive ? item.activeIcon : item.icon,
+                      size: 24,
+                      color: color,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        color: color,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -211,79 +307,6 @@ class _AppShellState extends State<AppShell> {
         break;
     }
   }
-
-  Widget _buildNavBar(BuildContext context, List<_NavItem> navItems) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final colors = GermanaColors.of(context);
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(32, 0, 32, bottomPadding + 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              color: colors.navSurface,
-              border: Border.all(
-                color: colors.navBorder,
-                width: 0.9,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(navItems.length, (index) {
-                final item = navItems[index];
-                final isActive = index == _currentIndex;
-
-                return GestureDetector(
-                  key: _navItemKeys[index],
-                  onTap: () => setState(() => _currentIndex = index),
-                  onLongPress: index == 2
-                      ? () => _showProfileQuickSwitcher(context)
-                      : null,
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    width: 60,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: Icon(
-                            isActive ? item.activeIcon : item.icon,
-                            key: ValueKey(isActive),
-                            size: 22,
-                            color: isActive
-                                ? AppColors.accentBlue
-                                : colors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight:
-                                isActive ? FontWeight.w600 : FontWeight.w500,
-                            color: isActive
-                                ? AppColors.accentBlue
-                                : colors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 enum _RoleSwitchAction {
@@ -306,8 +329,6 @@ class _RoleSwitcherCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pointerLeft = (anchorX - 10).clamp(18.0, width - 30.0);
-
     return Material(
       color: Colors.transparent,
       child: Stack(

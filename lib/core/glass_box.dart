@@ -2,8 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 
-/// The atomic design unit of Germana.
-/// Adapts glass tint, border, and shadow based on current theme brightness.
+/// Clean, standard card/container that stops abusing the heavy glass blur for
+/// standard inline content, creating a cleaner, more legible UI.
+/// For true floating glass (like navbars or sticky headers), you should use higher blur
+/// and deeper translucency manually.
 class GlassBox extends StatelessWidget {
   final Widget? child;
   final double blur;
@@ -13,26 +15,53 @@ class GlassBox extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final double borderWidth;
+  final bool isSolid;
 
   const GlassBox({
     super.key,
     this.child,
-    this.blur = 10,
-    this.opacity = 0.92,
+    this.blur = 30, // Increased blur for when it *is* used as glass
+    this.opacity = -1, // -1 means auto-determine from theme.dart
     this.borderRadius = 20,
     this.tint,
     this.padding,
     this.margin,
-    this.borderWidth = 0.9,
+    this.borderWidth = 0.5,
+    this.isSolid = true, // By default, let's make most boxes solid and clean
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = GermanaColors.of(context);
 
-    // Flat, readable glass plate: consistent tint + subtle edge, no heavy effects.
+    // If it's just a regular content card, render a clean solid surface
+    if (isSolid) {
+      return Container(
+        margin: margin,
+        padding: padding ?? const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.cardFill,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: colors.divider,
+            width: borderWidth,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: child,
+      );
+    }
+
+    // High-quality true liquid glass for floating elements
     final effectiveTint = tint ?? colors.glassSurface;
-    final effectiveOpacity = opacity.clamp(0.0, 1.0);
+    final defaultOpacity = colors.isDark ? 0.25 : 0.4;
+    final effectiveOpacity = opacity == -1 ? defaultOpacity : opacity.clamp(0.0, 1.0);
     final borderColor = colors.glassBorderSubtle;
 
     return Container(
@@ -58,3 +87,4 @@ class GlassBox extends StatelessWidget {
     );
   }
 }
+
