@@ -40,6 +40,20 @@ Notes:
 - Optional: set `MALAYSIA_FUEL_PRICE_FEED_URL` to sync fuel prices from a
 	remote JSON feed for fair-rate calculations.
 
+## Operational data source
+
+The app now reads operational seed data through a source abstraction instead of
+having screens import mock lists directly. The default source is still the mock
+bundle, but the app state boundary is ready for a live provider later.
+
+You can switch the source at build time with:
+
+```powershell
+flutter run --dart-define=OPERATIONAL_DATA_SOURCE=mock
+```
+
+If the define is omitted, the app still defaults to the mock source.
+
 Fuel feed JSON format (top-level or under `data`):
 
 ```json

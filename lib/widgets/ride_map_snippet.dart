@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -464,7 +463,7 @@ class _RideMapSnippetState extends State<RideMapSnippet> {
               Image.network(
                 staticUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
+                errorBuilder: (_, _, _) {
                   _webStaticMapsBlockedForSession = true;
                   return Container(
                     color: colors.glassSurface,

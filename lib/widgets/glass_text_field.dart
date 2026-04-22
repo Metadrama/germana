@@ -6,17 +6,25 @@ import 'package:germana/core/theme.dart';
 class GlassTextField extends StatelessWidget {
   final String hint;
   final IconData? prefixIcon;
+  final IconData? suffixIcon;
   final TextEditingController? controller;
   final bool readOnly;
   final VoidCallback? onTap;
+  final VoidCallback? onSuffixTap;
+  final TextInputType? keyboardType;
+  final int maxLines;
 
   const GlassTextField({
     super.key,
     required this.hint,
     this.prefixIcon,
+    this.suffixIcon,
     this.controller,
     this.readOnly = false,
     this.onTap,
+    this.onSuffixTap,
+    this.keyboardType,
+    this.maxLines = 1,
   });
 
   @override
@@ -42,12 +50,20 @@ class GlassTextField extends StatelessWidget {
             controller: controller,
             readOnly: readOnly,
             onTap: onTap,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
             style: AppTextStyles.body(context),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: AppTextStyles.bodySecondary(context),
               prefixIcon: prefixIcon != null
                   ? Icon(prefixIcon, color: colors.textSecondary, size: 20)
+                  : null,
+              suffixIcon: suffixIcon != null
+                  ? GestureDetector(
+                      onTap: onSuffixTap,
+                      child: Icon(suffixIcon, color: colors.textSecondary, size: 20),
+                    )
                   : null,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(

@@ -3,7 +3,6 @@ import 'package:germana/core/app_state.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
-import 'package:germana/data/mock_my_rides.dart';
 import 'package:germana/models/ride_model.dart';
 import 'package:germana/widgets/driver_initials_avatar.dart';
 import 'package:germana/widgets/pill_button.dart';
@@ -20,7 +19,7 @@ class MyRidesScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final state = AppStateProvider.of(context);
     final mergedById = <String, RideModel>{
-      for (final ride in mockMyRides) ride.id: ride,
+      for (final ride in state.passengerHistorySeedRides) ride.id: ride,
       for (final ride in state.passengerBookedRides) ride.id: ride,
     };
     final merged = mergedById.values.toList()

@@ -44,7 +44,7 @@ class RouteTimelineCard extends StatelessWidget {
     }
 
     final minutes = _estimatedArrival().difference(departureTime).inMinutes;
-    if (minutes < 60) return '~${minutes} min';
+    if (minutes < 60) return '~$minutes min';
     final hours = minutes ~/ 60;
     final rem = minutes % 60;
     if (rem == 0) return '~${hours}h';

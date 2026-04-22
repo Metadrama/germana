@@ -356,7 +356,7 @@ class LocationService {
   String _formatDuration(int totalMinutes) {
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
-    if (hours == 0) return '${minutes} min';
+    if (hours == 0) return '$minutes min';
     if (minutes == 0) return '${hours}h';
     return '${hours}h ${minutes}m';
   }

@@ -2,6 +2,7 @@
 /// Covers 14 brands, 80+ models sold in Malaysia from 2016–2025.
 /// Fuel consumption figures are real-world averages (L/100km).
 /// Seat counts are passenger seats (excluding driver).
+library;
 
 enum BodyType {
   sedan,

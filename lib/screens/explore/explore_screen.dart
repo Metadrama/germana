@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/core/app_state.dart';
-import 'package:germana/data/mock_rides_peninsular.dart';
-import 'package:germana/models/ride_model.dart';
 import 'package:germana/l10n/app_localizations.dart';
 import 'package:germana/widgets/glass_text_field.dart';
 import 'package:germana/widgets/ride_card.dart';
@@ -37,7 +35,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final state = AppStateProvider.of(context);
     final l10n = AppLocalizations.of(context);
     final discovery = RideDiscoveryService.discover(
-      rides: state.marketplaceRides(mockRidesPeninsular),
+      rides: state.marketplaceRides(),
       selectedFilter: _selectedFilter,
       currentLocationLat: state.currentLocationLat,
       currentLocationLng: state.currentLocationLng,
@@ -99,11 +97,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     onTap: () async {
                       final result = await Navigator.of(context).push<PlaceDetails>(
                         PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => PlacesSearchScreen(
+                          pageBuilder: (_, _, _) => PlacesSearchScreen(
                             hint: 'Set current area',
                             initialValue: state.currentLocationLabel,
                           ),
-                          transitionsBuilder: (_, animation, __, child) {
+                          transitionsBuilder: (_, animation, _, child) {
                             return FadeTransition(opacity: animation, child: child);
                           },
                         ),
@@ -158,27 +156,29 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   const SizedBox(height: 16),
 
                   // Search bar
-                  GestureDetector(
+                  GlassTextField(
+                    hint: l10n.searchHint,
+                    prefixIcon: Icons.search_rounded,
+                    suffixIcon: _searchDestination != null ? Icons.close_rounded : null,
+                    onSuffixTap: _searchDestination != null
+                        ? () {
+                            setState(() => _searchDestination = null);
+                          }
+                        : null,
+                    controller: TextEditingController(text: _searchDestination?.name),
+                    readOnly: true,
                     onTap: () async {
                       final result = await Navigator.of(context).push<PlaceDetails>(
                         PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => PlacesSearchScreen(
+                          pageBuilder: (_, _, _) => PlacesSearchScreen(
                             hint: l10n.searchHint,
                             initialValue: _searchDestination?.name,
                           ),
-                          transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+                          transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
                         ),
                       );
                       if (result != null) setState(() => _searchDestination = result);
                     },
-                    child: AbsorbPointer(
-                      child: GlassTextField(
-                        hint: l10n.searchHint,
-                        prefixIcon: Icons.search_rounded,
-                        controller: TextEditingController(text: _searchDestination?.name),
-                        readOnly: true,
-                      ),
-                    ),
                   ),
 
                   const SizedBox(height: 16),
@@ -189,7 +189,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: filters.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
                       itemBuilder: (context, index) {
                         final filter = filters[index];
                         final isSelected = filter.id == _selectedFilter;
@@ -286,7 +286,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 const Duration(milliseconds: 320),
                             reverseTransitionDuration:
                                 const Duration(milliseconds: 260),
-                            pageBuilder: (_, __, ___) =>
+                            pageBuilder: (_, _, _) =>
                                 RideDetailScreen(ride: ride),
                             transitionsBuilder: (_, animation, secondaryAnimation, child) {
                               final primaryCurve = CurvedAnimation(

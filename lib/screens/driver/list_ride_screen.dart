@@ -42,6 +42,8 @@ class _ListRideScreenState extends State<ListRideScreen> {
 
   late final TextEditingController _plateController;
   late final TextEditingController _customCarController;
+  late final TextEditingController _customFareController;
+  late final TextEditingController _reasonController;
   bool _useSelectedCarPlate = true;
   bool _useCustomCarName = false;
 
@@ -54,6 +56,13 @@ class _ListRideScreenState extends State<ListRideScreen> {
     super.initState();
     _plateController = TextEditingController();
     _customCarController = TextEditingController();
+    _customFareController = TextEditingController();
+    _reasonController = TextEditingController();
+    
+    _customFareController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
     _syncFuelPrices();
   }
 
@@ -83,6 +92,8 @@ class _ListRideScreenState extends State<ListRideScreen> {
   void dispose() {
     _plateController.dispose();
     _customCarController.dispose();
+    _customFareController.dispose();
+    _reasonController.dispose();
     super.dispose();
   }
 
@@ -188,11 +199,11 @@ class _ListRideScreenState extends State<ListRideScreen> {
   Future<void> _pickOrigin(AppLocalizations l10n) async {
     final result = await Navigator.of(context).push<PlaceDetails>(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => PlacesSearchScreen(
+        pageBuilder: (_, _, _) => PlacesSearchScreen(
           hint: l10n.fromWhereHint,
           initialValue: _origin?.name,
         ),
-        transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+        transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
       ),
     );
     if (result != null) {
@@ -204,11 +215,11 @@ class _ListRideScreenState extends State<ListRideScreen> {
   Future<void> _pickDestination(AppLocalizations l10n) async {
     final result = await Navigator.of(context).push<PlaceDetails>(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => PlacesSearchScreen(
+        pageBuilder: (_, _, _) => PlacesSearchScreen(
           hint: l10n.toWhereHint,
           initialValue: _destination?.name,
         ),
-        transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+        transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
       ),
     );
     if (result != null) {
@@ -222,10 +233,10 @@ class _ListRideScreenState extends State<ListRideScreen> {
 
     final result = await Navigator.of(context).push<PlaceDetails>(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const PlacesSearchScreen(
+        pageBuilder: (_, _, _) => const PlacesSearchScreen(
           hint: 'Pickup point',
         ),
-        transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+        transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
       ),
     );
 
@@ -314,6 +325,13 @@ class _ListRideScreenState extends State<ListRideScreen> {
     final fuelRm = pricing?.fuelRm ?? 0;
     final tollRm = pricing?.tollRm ?? fallbackToll;
     const platformFee = 1.0;
+
+    double? parsedDriverFare;
+    if (_customFareController.text.trim().isNotEmpty) {
+      parsedDriverFare = double.tryParse(_customFareController.text.trim());
+    }
+    final driverFareReason = _reasonController.text.trim().isEmpty ? null : _reasonController.text.trim();
+
     final driverSex = state.sex == PersonSex.female ? DriverSex.female : DriverSex.male;
 
     final ride = RideModel(
@@ -337,6 +355,8 @@ class _ListRideScreenState extends State<ListRideScreen> {
       fuelShare: fuelRm,
       tollShare: tollRm,
       platformFee: platformFee,
+      driverFare: parsedDriverFare,
+      fareReason: driverFareReason,
     );
     state.publishDriverRide(ride);
 
@@ -373,6 +393,23 @@ class _ListRideScreenState extends State<ListRideScreen> {
       return 'Enter a valid license plate (example: WXY 1234).';
     }
 
+    final pricing = _pricingFor(cars);
+    if (pricing != null) {
+      final customFareText = _customFareController.text.trim();
+      if (customFareText.isNotEmpty) {
+        final customFare = double.tryParse(customFareText);
+        if (customFare == null || customFare <= 0) {
+          return 'Enter a valid fare amount.';
+        }
+        final cap = pricing.perSeatRecommendedRm * 1.15;
+        if (customFare > cap && _reasonController.text.trim().isEmpty) {
+          return 'Please provide a reason for the fare above +15%.';
+        }
+      } else {
+        return 'Please set a fare per seat.';
+      }
+    }
+
     return null;
   }
 
@@ -388,12 +425,6 @@ class _ListRideScreenState extends State<ListRideScreen> {
     }
   }
 
-  bool _isStepUnlocked(int step, List<Map<String, dynamic>> cars) {
-    if (step == 0) return true;
-    if (step == 1) return _validateJourneyStep() == null;
-    return _validateJourneyStep() == null && _validateVehicleStep(cars) == null;
-  }
-
   void _goNextStep(List<Map<String, dynamic>> cars) {
     final error = _validateStep(_activeStep, cars);
     if (error != null) {
@@ -401,7 +432,15 @@ class _ListRideScreenState extends State<ListRideScreen> {
       return;
     }
     if (_activeStep < 2) {
-      setState(() => _activeStep += 1);
+      setState(() {
+        _activeStep += 1;
+        if (_activeStep == 1 && _customFareController.text.isEmpty) {
+          final pricing = _pricingFor(cars);
+          if (pricing != null) {
+            _customFareController.text = pricing.perSeatRecommendedRm.toStringAsFixed(2);
+          }
+        }
+      });
     }
   }
 
@@ -431,34 +470,31 @@ class _ListRideScreenState extends State<ListRideScreen> {
     final cars = _getCars(state);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.backgroundElevated,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
                     style: IconButton.styleFrom(
-                      backgroundColor: colors.glassSurface,
+                      backgroundColor: colors.background,
                       shape: const CircleBorder(),
                     ),
                   ),
                   const Spacer(),
-                  Text(l10n.listRideScreenTitle, style: AppTextStyles.headline(context)),
+                  Text(l10n.listRideScreenTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   const Spacer(),
                   const SizedBox(width: 48),
                 ],
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: _listed ? _buildSuccess(context) : _buildForm(context, cars),
-              ),
+              child: _listed ? _buildSuccess(context) : _buildForm(context, cars),
             ),
             if (!_listed)
               _buildBottomActions(context, cars),
@@ -485,36 +521,53 @@ class _ListRideScreenState extends State<ListRideScreen> {
       }
     }
 
+    final colors = GermanaColors.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildStepNavigator(context, cars, journeyReady: journeyReady, vehicleReady: vehicleReady),
-        const SizedBox(height: 14),
-        if (validationMessage != null) ...[
-          GlassBox(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+        Divider(height: 1, color: colors.divider),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.error_outline_rounded, size: 18, color: Colors.orange),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    validationMessage,
-                    style: AppTextStyles.caption(context).copyWith(color: Colors.orange),
+                if (validationMessage != null) ...[
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, size: 18, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            validationMessage,
+                            style: const TextStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: KeyedSubtree(
+                    key: ValueKey(_activeStep),
+                    child: stepContent(),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          child: KeyedSubtree(
-            key: ValueKey(_activeStep),
-            child: stepContent(),
           ),
         ),
       ],
@@ -528,103 +581,40 @@ class _ListRideScreenState extends State<ListRideScreen> {
     required bool vehicleReady,
   }) {
     final colors = GermanaColors.of(context);
-    const titles = <String>['Journey', 'Vehicle', 'Review'];
-    const icons = <IconData>[
-      Icons.route_rounded,
-      Icons.directions_car_filled_rounded,
-      Icons.visibility_outlined,
-    ];
-
     final progress = (_activeStep + 1) / 3;
 
-    return GlassBox(
-      padding: const EdgeInsets.all(12),
+    return Container(
+      color: colors.backgroundElevated,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Step ${_activeStep + 1} of 3',
-                style: AppTextStyles.captionBold(context),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.accentBlue),
               ),
-              const Spacer(),
               Text(
                 _activeStep == 2
                     ? 'Ready to publish'
                     : _activeStep == 1
                         ? 'Vehicle and pricing'
                         : 'Build your route',
-                style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: colors.textPrimary),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: colors.glassSurface,
+              backgroundColor: colors.background,
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: List<Widget>.generate(titles.length, (index) {
-              final isActive = _activeStep == index;
-              final unlocked = _isStepUnlocked(index, cars);
-              final done = (index == 0 && journeyReady) || (index == 1 && vehicleReady) || (index < _activeStep);
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: index == 2 ? 0 : 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: unlocked
-                        ? () => setState(() => _activeStep = index)
-                        : null,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: isActive
-                            ? AppColors.accentBlue.withValues(alpha: 0.16)
-                            : colors.glassSurface,
-                        border: Border.all(
-                          color: isActive
-                              ? AppColors.accentBlue.withValues(alpha: 0.5)
-                              : colors.glassBorderSubtle,
-                          width: 0.9,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            done ? Icons.check_rounded : icons[index],
-                            size: 15,
-                            color: isActive ? AppColors.accentBlue : colors.textSecondary,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              titles[index],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.caption(context).copyWith(
-                                color: isActive ? AppColors.accentBlue : colors.textSecondary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
           ),
         ],
       ),
@@ -810,7 +800,7 @@ class _ListRideScreenState extends State<ListRideScreen> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: cars.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, index) {
                     final car = cars[index];
                     final isSelected = index == _selectedCar;
@@ -957,12 +947,65 @@ class _ListRideScreenState extends State<ListRideScreen> {
                 ],
               ),
               const SizedBox(height: 8),
+              if (pricing != null) ...[
+                GlassTextField(
+                  controller: _customFareController,
+                  hint: 'Set fare per passenger (RM)',
+                  prefixIcon: Icons.attach_money_rounded,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final customFare = double.tryParse(_customFareController.text.trim()) ?? 0.0;
+                    final cap = pricing.perSeatRecommendedRm * 1.15;
+                    final isOverCap = customFare > cap;
+                    if (isOverCap) {
+                      return GlassBox(
+                        padding: const EdgeInsets.all(12),
+                        tint: Colors.orange,
+                        opacity: 0.1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Fare exceeds +15% guardrail',
+                                    style: AppTextStyles.captionBold(context).copyWith(color: Colors.orange),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Please provide a reason to justify this higher fare (e.g., luxury vehicle, special detour).',
+                              style: AppTextStyles.caption(context),
+                            ),
+                            const SizedBox(height: 8),
+                            GlassTextField(
+                              controller: _reasonController,
+                              hint: 'Reason for higher fare...',
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }
+                ),
+                const SizedBox(height: 8),
+              ],
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
                   pricing == null
                       ? 'Set route to generate realistic fare range.'
-                      : 'Suggested range: RM ${pricing.perSeatLowerRm.toStringAsFixed(2)} - RM ${pricing.perSeatUpperRm.toStringAsFixed(2)} / seat',
+                      : 'Suggest tracking base rate +15% max for fair pool.',
                   style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
                   textAlign: TextAlign.right,
                 ),
@@ -1003,9 +1046,17 @@ class _ListRideScreenState extends State<ListRideScreen> {
               const SizedBox(height: 6),
               _calcRow(
                 context,
-                'Suggested fare',
-                pricing == null ? 'Set route first' : 'RM ${pricing.perSeatRecommendedRm.toStringAsFixed(2)} per seat',
+                'Fare per passenger',
+                pricing == null ? 'Set route first' : 'RM ${_customFareController.text.trim()}',
               ),
+              if (pricing != null && (double.tryParse(_customFareController.text.trim()) ?? 0.0) > pricing.perSeatRecommendedRm * 1.15) ...[
+                const SizedBox(height: 6),
+                _calcRow(
+                  context,
+                  'High fare reason',
+                  _reasonController.text.trim(),
+                ),
+              ],
             ],
           ),
         ),
@@ -1056,24 +1107,44 @@ class _ListRideScreenState extends State<ListRideScreen> {
     required Widget child,
   }) {
     final colors = GermanaColors.of(context);
-    return GlassBox(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: colors.backgroundElevated,
+        border: Border(bottom: BorderSide(color: colors.divider ?? Colors.transparent)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.accentBlue),
-              const SizedBox(width: 8),
-              Text(title, style: AppTextStyles.headline(context)),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accentBlue.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 20, color: AppColors.accentBlue),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 13, color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
           child,
         ],
       ),
@@ -1091,31 +1162,36 @@ class _ListRideScreenState extends State<ListRideScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
-      child: GlassBox(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.divider ?? Colors.transparent, width: 0.8),
+        ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: AppColors.accentBlue),
-            const SizedBox(width: 8),
+            Icon(icon, size: 20, color: AppColors.accentBlue),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.captionBold(context),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded),
+            Icon(Icons.chevron_right_rounded, color: colors.textSecondary, size: 20),
           ],
         ),
       ),

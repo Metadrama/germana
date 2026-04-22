@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:germana/core/app_state.dart';
 import 'package:germana/core/glass_box.dart';
 import 'package:germana/core/theme.dart';
 import 'package:germana/l10n/app_localizations.dart';
-import 'package:germana/data/mock_ledger.dart';
 import 'package:germana/models/ride_model.dart';
 import 'package:germana/widgets/section_label.dart';
 import 'package:intl/intl.dart';
@@ -14,10 +14,12 @@ class LedgerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final totalSpent = mockLedger
+    final state = AppStateProvider.of(context);
+    final entries = state.bookingStore.ledgerEntries;
+    final totalSpent = entries
         .where((e) => e.amount < 0)
         .fold(0.0, (sum, e) => sum + e.amount.abs());
-    final totalRefunded = mockLedger
+    final totalRefunded = entries
         .where((e) => e.type == TransactionType.refund)
         .fold(0.0, (sum, e) => sum + e.amount);
 
@@ -85,7 +87,7 @@ class LedgerScreen extends StatelessWidget {
           const SizedBox(height: 24),
           SectionLabel(label: l10n.receipts),
 
-          ...mockLedger.map((entry) => _TransactionTile(entry: entry)),
+          ...entries.map((entry) => _TransactionTile(entry: entry)),
         ],
       ),
     );

@@ -92,13 +92,16 @@ class _AppShellState extends State<AppShell> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: KeyedSubtree(
-              key: ValueKey(role),
-              child: IndexedStack(
-                index: activeIndex,
-                children: config.screens,
+          Positioned.fill(
+            bottom: 84 + MediaQuery.paddingOf(context).bottom,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: KeyedSubtree(
+                key: ValueKey(role),
+                child: IndexedStack(
+                  index: activeIndex,
+                  children: config.screens,
+                ),
               ),
             ),
           ),
@@ -131,7 +134,7 @@ class _AppShellState extends State<AppShell> {
       barrierDismissible: true,
       barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (dialogContext, _, __) {
+      pageBuilder: (dialogContext, _, _) {
         final colors = GermanaColors.of(dialogContext);
         final media = MediaQuery.of(dialogContext).size;
         final cardWidth = (media.width - 24).clamp(248.0, 280.0).toDouble();

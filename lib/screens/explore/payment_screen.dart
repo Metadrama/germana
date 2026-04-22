@@ -37,15 +37,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    // Create booking record and escrow transaction via BookingStore
+    final booking = state.bookingStore.initiate(
+      rideId: widget.ride.id,
+      passengerId: 'passenger_current',
+      escrowAmount: widget.ride.totalPrice,
+    );
+
+    state.bookingStore.pay(
+      booking.id,
+      rideRoute: '${widget.ride.origin} -> ${widget.ride.destination}',
+    );
+
+    if (outcome == BookingOutcome.booked) {
+      state.bookingStore.accept(booking.id);
+    }
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, __, ___) =>
+        pageBuilder: (_, _, _) =>
             BookingConfirmedScreen(
               ride: widget.ride,
               pendingApproval: outcome == BookingOutcome.pendingApproval,
             ),
-        transitionsBuilder: (_, animation, __, child) {
+        transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(opacity: animation, child: child);
         },
       ),

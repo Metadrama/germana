@@ -23,6 +23,8 @@ class RideModel {
   final double fuelShare;
   final double tollShare;
   final double platformFee;
+  final double? driverFare;
+  final String? fareReason;
   final bool isBooked;
   final double? rating;        // for past rides
 
@@ -48,6 +50,8 @@ class RideModel {
     required this.fuelShare,
     required this.tollShare,
     required this.platformFee,
+    this.driverFare,
+    this.fareReason,
     this.isBooked = false,
     this.rating,
   }) : pickupAddress = pickupAddress ?? origin;
@@ -74,6 +78,8 @@ class RideModel {
     double? fuelShare,
     double? tollShare,
     double? platformFee,
+    double? driverFare,
+    String? fareReason,
     bool? isBooked,
     double? rating,
   }) {
@@ -99,6 +105,8 @@ class RideModel {
       fuelShare: fuelShare ?? this.fuelShare,
       tollShare: tollShare ?? this.tollShare,
       platformFee: platformFee ?? this.platformFee,
+      driverFare: driverFare ?? this.driverFare,
+      fareReason: fareReason ?? this.fareReason,
       isBooked: isBooked ?? this.isBooked,
       rating: rating ?? this.rating,
     );
@@ -127,6 +135,8 @@ class RideModel {
       fuelShare: (json['fuelShare'] as num?)?.toDouble() ?? 0,
       tollShare: (json['tollShare'] as num?)?.toDouble() ?? 0,
       platformFee: (json['platformFee'] as num?)?.toDouble() ?? 0,
+      driverFare: (json['driverFare'] as num?)?.toDouble(),
+      fareReason: json['fareReason'] as String?,
       isBooked: json['isBooked'] as bool? ?? false,
       rating: (json['rating'] as num?)?.toDouble(),
     );
@@ -155,6 +165,8 @@ class RideModel {
       'fuelShare': fuelShare,
       'tollShare': tollShare,
       'platformFee': platformFee,
+      'driverFare': driverFare,
+      'fareReason': fareReason,
       'isBooked': isBooked,
       'rating': rating,
     };
@@ -164,7 +176,7 @@ class RideModel {
     return raw == DriverSex.female.name ? DriverSex.female : DriverSex.male;
   }
 
-  double get totalPrice => fuelShare + tollShare + platformFee;
+  double get totalPrice => driverFare ?? (fuelShare + tollShare + platformFee);
 
   bool get hasExplicitDriverName =>
       driverName != null && driverName!.trim().isNotEmpty;

@@ -1,8 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:germana/data/mock_rides_peninsular.dart';
+import 'package:germana/core/operational_data_source.dart';
 import 'package:germana/models/ride_model.dart';
+import 'package:germana/services/booking_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum UserRole { passenger, driver, both }
@@ -166,8 +167,26 @@ class DriverManagedRide {
 /// Centralized app state — profile data, theme mode, and ride state.
 /// Injected via InheritedWidget so all screens can read/write.
 class AppState extends ChangeNotifier {
+  factory AppState({OperationalDataSource? operationalDataSource}) {
+    final resolvedSource = operationalDataSource ?? resolveOperationalDataSource();
+    final snapshot = resolvedSource.snapshot();
+    return AppState._(resolvedSource, snapshot);
+  }
+
+  AppState._(
+    this.operationalDataSource,
+    OperationalDataSnapshot snapshot,
+  )  : _operationalSnapshot = snapshot,
+       bookingStore = BookingStore(initialLedgerEntries: snapshot.ledgerEntries) {
+    bookingStore.addListener(notifyListeners);
+  }
+
   bool _isHydrated = false;
   bool get isHydrated => _isHydrated;
+
+  final OperationalDataSource operationalDataSource;
+  final OperationalDataSnapshot _operationalSnapshot;
+  final BookingStore bookingStore;
 
   static const _kThemeMode = 'theme_mode';
   static const _kIsAuthenticated = 'is_authenticated';
@@ -192,6 +211,7 @@ class AppState extends ChangeNotifier {
   static const _kDriverManagedRides = 'driver_managed_rides';
   static const _kPassengerBookedRides = 'passenger_booked_rides';
   static const _kMarketSeatOverrides = 'market_seat_overrides';
+  static const _kBookingLedgerEntries = 'booking_ledger_entries';
 
   // --- Auth & onboarding ---
   bool _isAuthenticated = false;
@@ -206,7 +226,7 @@ class AppState extends ChangeNotifier {
   bool _notificationPermissionGranted = false;
   bool get notificationPermissionGranted => _notificationPermissionGranted;
 
-  String _emailDomain = 'smail.unikl.edu.my';
+  final String _emailDomain = 'smail.unikl.edu.my';
   String get emailDomain => _emailDomain;
 
   UserRole _userRole = UserRole.both;
@@ -271,7 +291,7 @@ class AppState extends ChangeNotifier {
   int _totalRides = 12;
   int get totalRides => _totalRides;
 
-  double _rating = 4.9;
+  final double _rating = 4.9;
   double get rating => _rating;
 
   int _ridesAsDriver = 3;
@@ -284,6 +304,12 @@ class AppState extends ChangeNotifier {
 
   final List<RideModel> _passengerBookedRides = <RideModel>[];
   List<RideModel> get passengerBookedRides => List<RideModel>.unmodifiable(_passengerBookedRides);
+
+  List<RideModel> get marketplaceSeedRides =>
+      List<RideModel>.unmodifiable(_operationalSnapshot.marketplaceRides);
+
+  List<RideModel> get passengerHistorySeedRides =>
+      List<RideModel>.unmodifiable(_operationalSnapshot.passengerHistoryRides);
 
   final Map<String, int> _marketSeatOverrides = <String, int>{};
 
@@ -402,9 +428,10 @@ class AppState extends ChangeNotifier {
     return '${prefix}_$_idCounter';
   }
 
-  List<RideModel> marketplaceRides(List<RideModel> seedRides) {
+  List<RideModel> marketplaceRides([List<RideModel>? seedRides]) {
+    final seed = seedRides ?? marketplaceSeedRides;
     final now = DateTime.now();
-    final merged = seedRides.map((ride) {
+    final merged = seed.map((ride) {
       final seats = _marketSeatOverrides[ride.id];
       if (seats == null) return ride;
       return ride.copyWith(seatsLeft: seats);
@@ -590,7 +617,9 @@ class AppState extends ChangeNotifier {
   void seedDriverTestingScenario() {
     if (hasSeededDriverScenario) return;
 
-    final base = mockRidesPeninsular.first.copyWith(
+    if (marketplaceSeedRides.isEmpty) return;
+
+    final base = marketplaceSeedRides.first.copyWith(
       id: 'seed_driver_${DateTime.now().millisecondsSinceEpoch}',
       origin: currentLocationLabel,
       pickupAddress: currentLocationLabel,
@@ -691,6 +720,14 @@ class AppState extends ChangeNotifier {
         ..addAll(_decodePassengerBookedRides(bookedRaw));
     }
 
+    final ledgerRaw = prefs.getString(_kBookingLedgerEntries);
+    if (ledgerRaw != null && ledgerRaw.isNotEmpty) {
+      bookingStore.replaceLedgerEntries(
+        _decodeLedgerEntries(ledgerRaw),
+        notify: false,
+      );
+    }
+
     final seatRaw = prefs.getString(_kMarketSeatOverrides);
     if (seatRaw != null && seatRaw.isNotEmpty) {
       _marketSeatOverrides
@@ -738,6 +775,10 @@ class AppState extends ChangeNotifier {
       jsonEncode(_passengerBookedRides.map((e) => e.toJson()).toList()),
     );
     await prefs.setString(
+      _kBookingLedgerEntries,
+      jsonEncode(bookingStore.ledgerEntries.map((e) => e.toJson()).toList()),
+    );
+    await prefs.setString(
       _kMarketSeatOverrides,
       jsonEncode(_marketSeatOverrides),
     );
@@ -775,6 +816,18 @@ class AppState extends ChangeNotifier {
       );
     } catch (_) {
       return const <String, int>{};
+    }
+  }
+
+  List<LedgerEntry> _decodeLedgerEntries(String raw) {
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .whereType<Map<dynamic, dynamic>>()
+          .map((item) => LedgerEntry.fromJson(item.cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      return const <LedgerEntry>[];
     }
   }
 

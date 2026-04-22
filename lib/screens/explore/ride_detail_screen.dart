@@ -317,9 +317,9 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                               transitionDuration: const Duration(milliseconds: 350),
                               reverseTransitionDuration:
                                   const Duration(milliseconds: 300),
-                              pageBuilder: (_, __, ___) =>
+                              pageBuilder: (_, _, _) =>
                                   PaymentScreen(ride: widget.ride),
-                              transitionsBuilder: (_, animation, __, child) {
+                              transitionsBuilder: (_, animation, _, child) {
                                 return SlideTransition(
                                   position: Tween<Offset>(
                                     begin: const Offset(0, 1),

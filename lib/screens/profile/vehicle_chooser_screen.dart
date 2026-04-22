@@ -203,7 +203,7 @@ class _VehicleChooserScreenState extends State<VehicleChooserScreen> {
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           itemCount: malaysiaBrands.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
                           itemBuilder: (context, index) {
                             final brand = malaysiaBrands[index];
                             final isActive = brand == _selectedBrand;
