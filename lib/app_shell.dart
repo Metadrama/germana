@@ -131,12 +131,12 @@ class _AppShellState extends State<AppShell> {
                     borderRadius: BorderRadius.circular(100),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.15),
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08), // Much lighter shadow in light mode to prevent muddy glass
                         blurRadius: 30,
                         offset: const Offset(0, 15),
                       ),
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -177,7 +177,7 @@ class _AppShellState extends State<AppShell> {
       // I am completely turning off chromatic aberration. 
       // The yellow/blue ringing around the blurred text is causing the "dirty" look.
       chromaticAberration: 0.0, 
-      saturation: 1.25, 
+      saturation: 1.0, // Back to 1.0. The vibrancy was causing light mode backgrounds to over-saturate and look muddy/grey.
       
       shape: const RoundedRectangleShape(
         cornerRadius: 100,
@@ -194,12 +194,12 @@ class _AppShellState extends State<AppShell> {
         decoration: BoxDecoration(
           color: isDark 
               ? Colors.black.withValues(alpha: 0.35) 
-              : Colors.white.withValues(alpha: 0.30), // Slightly more milkiness to hide messy text contrast
+              : Colors.white.withValues(alpha: 0.45), // More pure white milkiness for light mode, cleaner frost
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.10),
+                : Colors.black.withValues(alpha: 0.05), // Very subtle crisp edge in light mode
             width: 0.5,
           ),
         ),
@@ -228,21 +228,10 @@ class _AppShellState extends State<AppShell> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
-                  // Replaced the dark grey blob in light mode with a luminous white
                   color: isActive
-                      ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.6))
+                      ? (isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.06))
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(100),
-                  // Apple segmented control style shadow for the active item in light mode
-                  boxShadow: isActive && !isDark 
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        )
-                      ] 
-                    : null,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
