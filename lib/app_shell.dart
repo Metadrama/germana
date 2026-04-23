@@ -95,9 +95,8 @@ class _AppShellState extends State<AppShell> {
             useSync:
                 false, // async capture — yields UI thread instead of blocking it
             pixelRatio:
-                1.0, // MUST BE 0.0 (Native). Any other value breaks the shader's UV coordinates and crops the blur!
-            refreshRate: LiquidGlassRefreshRate
-                .deviceRefreshRate, // full fluid framerate
+                0.0, // MUST BE 0.0 (Native). Any other value breaks the shader's UV coordinates and crops the blur!
+            refreshRate: LiquidGlassRefreshRate.high, // full fluid framerate
             backgroundWidget: Container(
               color: colors
                   .background, // Prevents transparent black from smearing into the blur
