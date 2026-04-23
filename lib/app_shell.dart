@@ -88,20 +88,24 @@ class _AppShellState extends State<AppShell> {
     final l10n = AppLocalizations.of(context);
     final config = _configForRole(role, l10n);
     final activeIndex = _currentIndex.clamp(0, config.screens.length - 1);
+    final colors = GermanaColors.of(context); // Define colors here
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.background, // Fill the scaffold background so it's not transparent black
       body: LiquidGlassView(
         useSync: true,
         pixelRatio: 0.0, // 0.0 uses device's native DPR
         refreshRate: LiquidGlassRefreshRate.deviceRefreshRate,
-        backgroundWidget: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: KeyedSubtree(
-            key: ValueKey(role),
-            child: IndexedStack(
-              index: activeIndex,
-              children: config.screens,
+        backgroundWidget: Container(
+          color: colors.background, // Prevents transparent black from smearing into the blur
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: KeyedSubtree(
+              key: ValueKey(role),
+              child: IndexedStack(
+                index: activeIndex,
+                children: config.screens,
+              ),
             ),
           ),
         ),
@@ -124,33 +128,28 @@ class _AppShellState extends State<AppShell> {
         alignment: Alignment.bottomCenter,
         margin: EdgeInsets.only(bottom: bottomPadding + 16),
       ),
-      // Clean, native-looking blur
-      blur: const LiquidGlassBlur(sigmaX: 12, sigmaY: 12),
+      blur: const LiquidGlassBlur(sigmaX: 18, sigmaY: 18),
       
       color: Colors.transparent,
           
       refractionMode: LiquidGlassRefractionMode.shapeRefraction,
       
-      // FIX: The dark smudge at the bottom is literally the shader refracting the black Android
-      // navigation bar up into the glass! Because distortionWidth was 30.0, it was pulling 
-      // pixels from 30pt outside the pill. We need to tighten this so it only bends the immediate edge.
-      distortion: 0.04, 
-      distortionWidth: 8.0, 
-      
-      // Reduced zoom to prevent pulling in surrounding outside pixels
-      magnification: 1.02, 
-      
+      // True optic lens physics
+      distortion: 0.12, 
+      distortionWidth: 30.0, 
+      magnification: 1.1, 
       chromaticAberration: 0.0, 
-      saturation: 1.1, // Subtle vibrancy
+      saturation: 1.3, // Vibrancy
       
-      shape: RoundedRectangleShape(
+      // Absolutely NO fake shader borders or shadows. Let the inner Container do the clean border.
+      shape: const RoundedRectangleShape(
         cornerRadius: 100,
-        borderWidth: 1.5,
-        borderSoftness: 2.0,
-        lightIntensity: 0.4, // Keep the subtle top highlight
-        lightColor: Colors.white.withValues(alpha: 0.6),
-        shadowColor: Colors.transparent, // No fake shadows
-        oneSideLightIntensity: 0.1,
+        borderWidth: 0.0,
+        borderSoftness: 0.0,
+        lightIntensity: 0.0,
+        lightColor: Colors.transparent,
+        shadowColor: Colors.transparent, 
+        oneSideLightIntensity: 0.0,
       ),
       
       child: Container(
