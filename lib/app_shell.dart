@@ -111,7 +111,10 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             ),
-            children: [_buildNavBarLens(context, config.navItems)],
+            children: [
+              _buildNavBarLens(context, config.navItems),
+              _buildActionButtonLens(context),
+            ],
           ),
           // The Drop Shadow Layer behind the lens, but outside LiquidGlassView to not be refracted
           Positioned(
@@ -137,7 +140,7 @@ class _AppShellState extends State<AppShell> {
       width: 260,
       position: LiquidGlassAlignPosition(
         alignment: Alignment.bottomCenter,
-        margin: EdgeInsets.only(bottom: bottomPadding + 16),
+        margin: EdgeInsets.only(bottom: bottomPadding + 16, right: 72),
       ),
       blur: const LiquidGlassBlur(
         sigmaX:
@@ -180,9 +183,9 @@ class _AppShellState extends State<AppShell> {
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF2A2A2D).withValues(
-                        alpha: 0.35,
+                        alpha: 0.50,
                       ) // Greyish dark, perfectly translucent
-                    : Colors.white.withValues(alpha: 0.45),
+                    : Colors.white.withValues(alpha: 0.65),
                 borderRadius: BorderRadius.circular(100),
               ),
             ),
@@ -190,15 +193,20 @@ class _AppShellState extends State<AppShell> {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 350),
               curve: Curves.easeOutQuart, // Sharp fast start, firm smooth stop
-              left: 5.0 + (_currentIndex * (250 / navItems.length)),
-              top: 5.0,
-              width: 250 / navItems.length,
-              height: 50.0,
+              left: 5.5 + (_currentIndex * (260 / navItems.length)),
+              top: 5.5,
+              width: (260 / navItems.length) - 11.0,
+              height: 49.0,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(100),
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.22)
+                      ? const Color.fromARGB(
+                          255,
+                          165,
+                          165,
+                          165,
+                        ).withValues(alpha: 0.19)
                       : Colors.black.withValues(alpha: 0.08),
                 ),
               ),
@@ -247,62 +255,151 @@ class _AppShellState extends State<AppShell> {
               ),
             ),
             // 3. Nav Items
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 5,
-              ), // 5px padding to make 83w items fit in 260w concentric
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment
-                    .center, // Items fill exactly, so center them
-                children: List.generate(navItems.length, (index) {
-                  final item = navItems[index];
-                  final isActive = index == _currentIndex;
-                  final activeColor = AppColors.accentBlue;
-                  final inactiveColor = isDark
-                      ? Colors.white
-                      : const Color(0xFF3C3C43);
-                  final color = isActive ? activeColor : inactiveColor;
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(navItems.length, (index) {
+                final item = navItems[index];
+                final isActive = index == _currentIndex;
+                final activeColor = AppColors.accentBlue;
+                final inactiveColor = isDark
+                    ? Colors.white
+                    : const Color(0xFF3C3C43);
+                final color = isActive ? activeColor : inactiveColor;
 
-                  return GestureDetector(
-                    key: _navItemKeys[index],
-                    onTap: () => setState(() => _currentIndex = index),
-                    onLongPress: index == 2
-                        ? () => _showProfileQuickSwitcher(context)
-                        : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      height: 50, // Concentric height (60 - 10 = 50)
-                      width: 250 / navItems.length, // Exact fractional width
-                      margin: EdgeInsets.zero, // Removed margin to prevent gaps
-                      color: Colors.transparent,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isActive ? item.activeIcon : item.icon,
-                            size: 24,
+                return GestureDetector(
+                  key: _navItemKeys[index],
+                  onTap: () => setState(() => _currentIndex = index),
+                  onLongPress: index == 2
+                      ? () => _showProfileQuickSwitcher(context)
+                      : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    height: 60, // Full height for larger tap target
+                    width: 260 / navItems.length, // Exact fractional width
+                    margin: EdgeInsets.zero,
+                    color: Colors.transparent,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isActive ? item.activeIcon : item.icon,
+                          size: 24,
+                          color: color,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isActive
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             color: color,
+                            letterSpacing: -0.2,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isActive
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
-                              color: color,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  );
-                }),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  LiquidGlass _buildActionButtonLens(BuildContext context) {
+    final colors = GermanaColors.of(context);
+    final isDark = colors.isDark;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+
+    return LiquidGlass(
+      height: 60,
+      width: 60,
+      position: LiquidGlassAlignPosition(
+        alignment: Alignment.bottomCenter,
+        margin: EdgeInsets.only(bottom: bottomPadding + 16, left: 272),
+      ),
+      blur: const LiquidGlassBlur(sigmaX: 18, sigmaY: 18),
+      color: Colors.transparent,
+      refractionMode: LiquidGlassRefractionMode.shapeRefraction,
+      distortion: 0.15,
+      distortionWidth: 16.0,
+      magnification: 1.07,
+      chromaticAberration: 0,
+      saturation: 1.0,
+      shape: const RoundedRectangleShape(
+        cornerRadius: 100,
+        borderWidth: 0.0,
+        borderSoftness: 0.0,
+        lightIntensity: 0.0,
+        lightColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        oneSideLightIntensity: 0.0,
+      ),
+      child: SizedBox(
+        width: 60,
+        height: 60,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF2A2A2D).withValues(alpha: 0.35)
+                    : Colors.white.withValues(alpha: 0.70),
+                borderRadius: BorderRadius.circular(100),
+              ),
+            ),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.black.withValues(alpha: 0.04),
+                    width: 0.5,
+                    strokeAlign: BorderSide.strokeAlignInside,
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      isDark
+                          ? Colors.white.withValues(alpha: 0.10)
+                          : Colors.white.withValues(alpha: 0.25),
+                      Colors.transparent,
+                      Colors.transparent,
+                      isDark
+                          ? Colors.black.withValues(alpha: 0.25)
+                          : Colors.black.withValues(alpha: 0.05),
+                    ],
+                    stops: const [0.0, 0.15, 0.85, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                // Action for the circular button
+              },
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 60,
+                height: 60,
+                child: Center(
+                  child: Icon(
+                    CupertinoIcons.search,
+                    size: 24,
+                    color: isDark ? Colors.white : const Color(0xFF3C3C43),
+                  ),
+                ),
               ),
             ),
           ],
