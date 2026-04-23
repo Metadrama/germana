@@ -9,7 +9,7 @@ import 'package:germana/screens/driver/list_ride_screen.dart';
 import 'package:germana/screens/explore/explore_screen.dart';
 import 'package:germana/screens/ledger/ledger_screen.dart';
 import 'package:germana/screens/profile/profile_screen.dart';
-import 'package:liquid_glass_easy/liquid_glass_easy.dart';
+import 'package:germana/core/liquid_glass/liquid_glass_easy.dart';
 
 /// Persistent shell with floating frosted pill navigation bar.
 class AppShell extends StatefulWidget {
@@ -93,8 +93,8 @@ class _AppShellState extends State<AppShell> {
       backgroundColor: Colors.transparent,
       body: LiquidGlassView(
         useSync: true,
-        pixelRatio: 0.8, // Recommended for full screen backgrounds
-        refreshRate: LiquidGlassRefreshRate.medium,
+        pixelRatio: 0.0, // 0.0 uses device's native DPR
+        refreshRate: LiquidGlassRefreshRate.deviceRefreshRate,
         backgroundWidget: AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: KeyedSubtree(
@@ -119,38 +119,51 @@ class _AppShellState extends State<AppShell> {
 
     return LiquidGlass(
       height: 64,
-      width: 260, // Fixed width
+      width: 260,
       position: LiquidGlassAlignPosition(
         alignment: Alignment.bottomCenter,
         margin: EdgeInsets.only(bottom: bottomPadding + 16),
       ),
-      // Lower blur to actually let the refraction be visible and crisp
-      blur: const LiquidGlassBlur(sigmaX: 10, sigmaY: 10),
+      // Clean, native-looking blur
+      blur: const LiquidGlassBlur(sigmaX: 12, sigmaY: 12),
       
-      // Extremely subtle tint on the glass itself
-      color: isDark 
-          ? Colors.black.withValues(alpha: 0.15) 
-          : Colors.white.withValues(alpha: 0.15),
+      color: Colors.transparent,
           
       refractionMode: LiquidGlassRefractionMode.shapeRefraction,
       
-      // Bring back the aggressive physical glass properties
-      distortion: 0.15, // The bending strength
-      distortionWidth: 16.0, // Restrict the heavy bending to a beautiful edge rim
-      magnification: 1.1, // Zoom in slightly like a solid glass block
-      chromaticAberration: 0.005, // Add that physical color splitting at the refracted edges
+      // FIX: The dark smudge at the bottom is literally the shader refracting the black Android
+      // navigation bar up into the glass! Because distortionWidth was 30.0, it was pulling 
+      // pixels from 30pt outside the pill. We need to tighten this so it only bends the immediate edge.
+      distortion: 0.04, 
+      distortionWidth: 8.0, 
       
-      shape: const RoundedRectangleShape(cornerRadius: 100),
+      // Reduced zoom to prevent pulling in surrounding outside pixels
+      magnification: 1.02, 
+      
+      chromaticAberration: 0.0, 
+      saturation: 1.1, // Subtle vibrancy
+      
+      shape: RoundedRectangleShape(
+        cornerRadius: 100,
+        borderWidth: 1.5,
+        borderSoftness: 2.0,
+        lightIntensity: 0.4, // Keep the subtle top highlight
+        lightColor: Colors.white.withValues(alpha: 0.6),
+        shadowColor: Colors.transparent, // No fake shadows
+        oneSideLightIntensity: 0.1,
+      ),
+      
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          // Completely transparent here so the LiquidGlass shader does all the work
-          color: Colors.transparent, 
+          color: isDark 
+              ? Colors.black.withValues(alpha: 0.3) 
+              : Colors.white.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.2)
-                : Colors.white.withValues(alpha: 0.5),
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.05),
             width: 0.5,
           ),
         ),
@@ -180,7 +193,7 @@ class _AppShellState extends State<AppShell> {
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   color: isActive
-                      ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.08))
+                      ? (isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06))
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(100),
                 ),
