@@ -83,8 +83,7 @@ class _AppShellState extends State<AppShell> {
     final l10n = AppLocalizations.of(context);
     final config = _configForRole(role, l10n);
     final activeIndex = _currentIndex.clamp(0, config.screens.length - 1);
-    final colors = GermanaColors.of(context); // Define colors here
-    final isDark = colors.isDark;
+    final colors = GermanaColors.of(context);
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -93,9 +92,12 @@ class _AppShellState extends State<AppShell> {
       body: Stack(
         children: [
           LiquidGlassView(
-            useSync: false,  // async capture — yields UI thread instead of blocking it
-            pixelRatio: 1.2, // library recommends <1.0 for full-screen; 1.2 is invisible behind sigmaX=24 blur
-            refreshRate: LiquidGlassRefreshRate.high, // 60fps cap — deviceRefreshRate had zero throttle (120 captures/s on ProMotion)
+            useSync:
+                false, // async capture — yields UI thread instead of blocking it
+            pixelRatio:
+                1.0, // MUST BE 0.0 (Native). Any other value breaks the shader's UV coordinates and crops the blur!
+            refreshRate: LiquidGlassRefreshRate
+                .deviceRefreshRate, // full fluid framerate
             backgroundWidget: Container(
               color: colors
                   .background, // Prevents transparent black from smearing into the blur
@@ -139,27 +141,27 @@ class _AppShellState extends State<AppShell> {
         margin: EdgeInsets.only(bottom: bottomPadding + 16),
       ),
       blur: const LiquidGlassBlur(
-        sigmaX: 24,
-        sigmaY: 24,
-      ), // Reduced from 18 to be less frosty and more glassy
+        sigmaX:
+            18, // Reduced from 32 so the edge distortion lens effect isn't blurred into flat mush
+        sigmaY: 18,
+      ), // Slightly more frosty to smooth out the blocky text
 
       color: Colors.transparent,
 
       refractionMode: LiquidGlassRefractionMode.shapeRefraction,
 
-      // Softer, smoother bend.
-      distortion: 0.05,
-      distortionWidth: 12.0,
+      // Stronger, wider bend at the edge to give it a physical extruded glass look
+      distortion: 0.15,
+      distortionWidth: 16.0,
       magnification: 1.07,
 
       // I am completely turning off chromatic aberration.
       // The yellow/blue ringing around the blurred text is causing the "dirty" look.
-      chromaticAberration: 0.0,
+      chromaticAberration: 0,
       saturation:
           1.0, // Back to 1.0. The vibrancy was causing light mode backgrounds to over-saturate and look muddy/grey.
-
       shape: const RoundedRectangleShape(
-        cornerRadius: 100,
+        cornerRadius: 100, // Restored the pill shape mask!
         borderWidth: 0.0,
         borderSoftness: 0.0,
         lightIntensity: 0.0,
@@ -168,140 +170,144 @@ class _AppShellState extends State<AppShell> {
         oneSideLightIntensity: 0.0,
       ),
 
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // 1. Base Dark/Light Glass Wash
-          Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF2A2A2D).withValues(
-                      alpha: 0.35,
-                    ) // Greyish dark, perfectly translucent
-                  : Colors.white.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(100),
-            ),
-          ),
-          // 2. iOS Native Smooth Lighting (No Dithering)
-          Positioned.fill(
-            child: Container(
+      child: SizedBox(
+        width: 260,
+        height: 60,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 1. Base Dark/Light Glass Wash
+            Container(
               decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF2A2A2D).withValues(
+                        alpha: 0.35,
+                      ) // Greyish dark, perfectly translucent
+                    : Colors.white.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(100),
-                // Crisp pronounced thin outer edge
-                border: Border.all(
+              ),
+            ),
+            // 2. Sliding Active Pill Background (Placed UNDER the lighting for seamless integration)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutQuart, // Sharp fast start, firm smooth stop
+              left: 5.0 + (_currentIndex * (250 / navItems.length)),
+              top: 5.0,
+              width: 250 / navItems.length,
+              height: 50.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100),
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.15)
-                      : Colors.black.withValues(alpha: 0.10),
-                  width: 0.5,
-                  strokeAlign: BorderSide.strokeAlignInside,
-                ),
-                // Smooth gradient for the inner shadow / light bevel
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    isDark
-                        ? Colors.white.withValues(alpha: 0.10)
-                        : Colors.white.withValues(
-                            alpha: 0.25,
-                          ), // Soft top-left highlight
-                    Colors.transparent,
-                    Colors.transparent,
-                    isDark
-                        ? Colors.black.withValues(alpha: 0.25)
-                        : Colors.black.withValues(
-                            alpha: 0.05,
-                          ), // Soft bottom-right inner shadow
-                  ],
-                  stops: const [
-                    0.0,
-                    0.15,
-                    0.85,
-                    1.0,
-                  ], // Keeps the shadow strictly to the edges, not reaching far inward
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : Colors.black.withValues(alpha: 0.08),
                 ),
               ),
             ),
-          ),
-          // 3. Nav Items
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 5,
-            ), // 5px padding to make 83w items fit in 260w concentric
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment
-                  .center, // Items fill exactly, so center them
-              children: List.generate(navItems.length, (index) {
-                final item = navItems[index];
-                final isActive = index == _currentIndex;
-                final activeColor = AppColors.accentBlue;
-                final inactiveColor = isDark
-                    ? Colors.white
-                    : const Color(0xFF3C3C43);
-                final color = isActive ? activeColor : inactiveColor;
-
-                return GestureDetector(
-                  key: _navItemKeys[index],
-                  onTap: () => setState(() => _currentIndex = index),
-                  onLongPress: index == 2
-                      ? () => _showProfileQuickSwitcher(context)
-                      : null,
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOutCubic,
-                    height: 50, // Concentric height (60 - 10 = 50)
-                    width: 83, // Exact width (250 / 3 = 83.3)
-                    margin: EdgeInsets.zero, // Removed margin to prevent gaps
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? (isDark
-                                ? Colors.white.withValues(alpha: 0.18)
-                                : Colors.black.withValues(
-                                    alpha: 0.08,
-                                  )) // Lighter for frosted pop
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(100),
-                      border: isActive
-                          ? Border.all(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.08)
-                                  : Colors.black.withValues(
-                                      alpha: 0.04,
-                                    ), // Re-adding ultra-subtle border for crisp active shape
-                              width: 0.5,
-                            )
-                          : null,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isActive ? item.activeIcon : item.icon,
-                          size: 24,
-                          color: color,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isActive
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                            color: color,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
+            // 3. iOS Native Smooth Lighting (Overlays both the base wash AND the active pill)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100),
+                  // Crisp pronounced thin outer edge (sub-pixel perfect)
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.black.withValues(
+                            alpha: 0.04,
+                          ), // Softened to avoid looking like a flat grey line
+                    width: 0.5,
+                    strokeAlign: BorderSide.strokeAlignInside,
                   ),
-                );
-              }),
+                  // Smooth gradient for the inner shadow / light bevel
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      isDark
+                          ? Colors.white.withValues(alpha: 0.10)
+                          : Colors.white.withValues(
+                              alpha: 0.25,
+                            ), // Soft top-left highlight
+                      Colors.transparent,
+                      Colors.transparent,
+                      isDark
+                          ? Colors.black.withValues(alpha: 0.25)
+                          : Colors.black.withValues(
+                              alpha: 0.05,
+                            ), // Soft bottom-right inner shadow
+                    ],
+                    stops: const [
+                      0.0,
+                      0.15,
+                      0.85,
+                      1.0,
+                    ], // Keeps the shadow strictly to the edges, not reaching far inward
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            // 3. Nav Items
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 5,
+              ), // 5px padding to make 83w items fit in 260w concentric
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment
+                    .center, // Items fill exactly, so center them
+                children: List.generate(navItems.length, (index) {
+                  final item = navItems[index];
+                  final isActive = index == _currentIndex;
+                  final activeColor = AppColors.accentBlue;
+                  final inactiveColor = isDark
+                      ? Colors.white
+                      : const Color(0xFF3C3C43);
+                  final color = isActive ? activeColor : inactiveColor;
+
+                  return GestureDetector(
+                    key: _navItemKeys[index],
+                    onTap: () => setState(() => _currentIndex = index),
+                    onLongPress: index == 2
+                        ? () => _showProfileQuickSwitcher(context)
+                        : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      height: 50, // Concentric height (60 - 10 = 50)
+                      width: 250 / navItems.length, // Exact fractional width
+                      margin: EdgeInsets.zero, // Removed margin to prevent gaps
+                      color: Colors.transparent,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isActive ? item.activeIcon : item.icon,
+                            size: 24,
+                            color: color,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isActive
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: color,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
