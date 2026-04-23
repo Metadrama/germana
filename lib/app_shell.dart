@@ -21,7 +21,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
-  final List<GlobalKey> _navItemKeys = List<GlobalKey>.generate(3, (_) => GlobalKey());
+  final List<GlobalKey> _navItemKeys = List<GlobalKey>.generate(
+    3,
+    (_) => GlobalKey(),
+  );
 
   UserRole _effectiveRole(UserRole role) {
     return role == UserRole.driver ? UserRole.driver : UserRole.passenger;
@@ -30,11 +33,7 @@ class _AppShellState extends State<AppShell> {
   _ShellConfig _configForRole(UserRole role, AppLocalizations l10n) {
     if (role == UserRole.driver) {
       return const _ShellConfig(
-        screens: [
-          DriverHubScreen(),
-          ListRideScreen(),
-          ProfileScreen(),
-        ],
+        screens: [DriverHubScreen(), ListRideScreen(), ProfileScreen()],
         navItems: [
           _NavItem(
             icon: CupertinoIcons.square_grid_2x2,
@@ -56,11 +55,7 @@ class _AppShellState extends State<AppShell> {
     }
 
     return _ShellConfig(
-      screens: const [
-        ExploreScreen(),
-        LedgerScreen(),
-        ProfileScreen(),
-      ],
+      screens: const [ExploreScreen(), LedgerScreen(), ProfileScreen()],
       navItems: [
         _NavItem(
           icon: CupertinoIcons.house,
@@ -93,7 +88,8 @@ class _AppShellState extends State<AppShell> {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      backgroundColor: colors.background, // Fill the scaffold background so it's not transparent black
+      backgroundColor: colors
+          .background, // Fill the scaffold background so it's not transparent black
       body: Stack(
         children: [
           LiquidGlassView(
@@ -101,7 +97,8 @@ class _AppShellState extends State<AppShell> {
             pixelRatio: 0.0, // 0.0 uses device's native DPR
             refreshRate: LiquidGlassRefreshRate.deviceRefreshRate,
             backgroundWidget: Container(
-              color: colors.background, // Prevents transparent black from smearing into the blur
+              color: colors
+                  .background, // Prevents transparent black from smearing into the blur
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 child: KeyedSubtree(
@@ -113,9 +110,7 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             ),
-            children: [
-              _buildNavBarLens(context, config.navItems),
-            ],
+            children: [_buildNavBarLens(context, config.navItems)],
           ),
           // The Drop Shadow Layer behind the lens, but outside LiquidGlassView to not be refracted
           Positioned(
@@ -123,27 +118,7 @@ class _AppShellState extends State<AppShell> {
             right: 0,
             bottom: bottomPadding + 16,
             child: Center(
-              child: IgnorePointer(
-                child: Container(
-                  width: 260,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(100),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08), // Much lighter shadow in light mode to prevent muddy glass
-                        blurRadius: 30,
-                        offset: const Offset(0, 15),
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              child: IgnorePointer(child: Container(width: 260, height: 64)),
             ),
           ),
         ],
@@ -157,106 +132,176 @@ class _AppShellState extends State<AppShell> {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return LiquidGlass(
-      height: 64,
+      height: 60,
       width: 260,
       position: LiquidGlassAlignPosition(
         alignment: Alignment.bottomCenter,
         margin: EdgeInsets.only(bottom: bottomPadding + 16),
       ),
-      blur: const LiquidGlassBlur(sigmaX: 18, sigmaY: 18),
-      
+      blur: const LiquidGlassBlur(
+        sigmaX: 24,
+        sigmaY: 24,
+      ), // Reduced from 18 to be less frosty and more glassy
+
       color: Colors.transparent,
-          
+
       refractionMode: LiquidGlassRefractionMode.shapeRefraction,
-      
+
       // Softer, smoother bend.
-      distortion: 0.10, 
-      distortionWidth: 12.0, 
-      magnification: 1.0, 
-      
-      // I am completely turning off chromatic aberration. 
+      distortion: 0.05,
+      distortionWidth: 12.0,
+      magnification: 1.07,
+
+      // I am completely turning off chromatic aberration.
       // The yellow/blue ringing around the blurred text is causing the "dirty" look.
-      chromaticAberration: 0.0, 
-      saturation: 1.0, // Back to 1.0. The vibrancy was causing light mode backgrounds to over-saturate and look muddy/grey.
-      
+      chromaticAberration: 0.0,
+      saturation:
+          1.0, // Back to 1.0. The vibrancy was causing light mode backgrounds to over-saturate and look muddy/grey.
+
       shape: const RoundedRectangleShape(
         cornerRadius: 100,
         borderWidth: 0.0,
         borderSoftness: 0.0,
         lightIntensity: 0.0,
         lightColor: Colors.transparent,
-        shadowColor: Colors.transparent, 
+        shadowColor: Colors.transparent,
         oneSideLightIntensity: 0.0,
       ),
-      
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: isDark 
-              ? Colors.black.withValues(alpha: 0.35) 
-              : Colors.white.withValues(alpha: 0.45), // More pure white milkiness for light mode, cleaner frost
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.05), // Very subtle crisp edge in light mode
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(navItems.length, (index) {
-            final item = navItems[index];
-            final isActive = index == _currentIndex;
-            final activeColor = AppColors.accentBlue;
-            final inactiveColor = isDark ? Colors.white : const Color(0xFF3C3C43);
-            final color = isActive ? activeColor : inactiveColor;
 
-            return GestureDetector(
-              key: _navItemKeys[index],
-              onTap: () => setState(() => _currentIndex = index),
-              onLongPress: index == 2
-                  ? () => _showProfileQuickSwitcher(context)
-                  : null,
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                height: 52,
-                constraints: const BoxConstraints(minWidth: 76),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? (isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.06))
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(100),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. Base Dark/Light Glass Wash
+          Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF2A2A2D).withValues(
+                      alpha: 0.35,
+                    ) // Greyish dark, perfectly translucent
+                  : Colors.white.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(100),
+            ),
+          ),
+          // 2. iOS Native Smooth Lighting (No Dithering)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(100),
+                // Crisp pronounced thin outer edge
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.10),
+                  width: 0.5,
+                  strokeAlign: BorderSide.strokeAlignInside,
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isActive ? item.activeIcon : item.icon,
-                      size: 24,
-                      color: color,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                        color: color,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
+                // Smooth gradient for the inner shadow / light bevel
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    isDark
+                        ? Colors.white.withValues(alpha: 0.10)
+                        : Colors.white.withValues(
+                            alpha: 0.25,
+                          ), // Soft top-left highlight
+                    Colors.transparent,
+                    Colors.transparent,
+                    isDark
+                        ? Colors.black.withValues(alpha: 0.25)
+                        : Colors.black.withValues(
+                            alpha: 0.05,
+                          ), // Soft bottom-right inner shadow
                   ],
+                  stops: const [
+                    0.0,
+                    0.15,
+                    0.85,
+                    1.0,
+                  ], // Keeps the shadow strictly to the edges, not reaching far inward
                 ),
               ),
-            );
-          }),
-        ),
+            ),
+          ),
+          // 3. Nav Items
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 5,
+            ), // 5px padding to make 83w items fit in 260w concentric
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment
+                  .center, // Items fill exactly, so center them
+              children: List.generate(navItems.length, (index) {
+                final item = navItems[index];
+                final isActive = index == _currentIndex;
+                final activeColor = AppColors.accentBlue;
+                final inactiveColor = isDark
+                    ? Colors.white
+                    : const Color(0xFF3C3C43);
+                final color = isActive ? activeColor : inactiveColor;
+
+                return GestureDetector(
+                  key: _navItemKeys[index],
+                  onTap: () => setState(() => _currentIndex = index),
+                  onLongPress: index == 2
+                      ? () => _showProfileQuickSwitcher(context)
+                      : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    height: 50, // Concentric height (60 - 10 = 50)
+                    width: 83, // Exact width (250 / 3 = 83.3)
+                    margin: EdgeInsets.zero, // Removed margin to prevent gaps
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? (isDark
+                                ? Colors.white.withValues(alpha: 0.18)
+                                : Colors.black.withValues(
+                                    alpha: 0.08,
+                                  )) // Lighter for frosted pop
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(100),
+                      border: isActive
+                          ? Border.all(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.black.withValues(
+                                      alpha: 0.04,
+                                    ), // Re-adding ultra-subtle border for crisp active shape
+                              width: 0.5,
+                            )
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isActive ? item.activeIcon : item.icon,
+                          size: 24,
+                          color: color,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isActive
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: color,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -268,8 +313,12 @@ class _AppShellState extends State<AppShell> {
     if (itemContext == null) return;
 
     final itemBox = itemContext.findRenderObject() as RenderBox;
-    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final targetTopLeft = itemBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final targetTopLeft = itemBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayBox,
+    );
     final targetRect = targetTopLeft & itemBox.size;
 
     final currentRole = _effectiveRole(state.userRole);
@@ -285,8 +334,10 @@ class _AppShellState extends State<AppShell> {
         final cardWidth = (media.width - 24).clamp(248.0, 280.0).toDouble();
         const cardHeight = 196.0;
 
-        final left = (targetRect.center.dx - (cardWidth / 2))
-            .clamp(12.0, media.width - cardWidth - 12.0);
+        final left = (targetRect.center.dx - (cardWidth / 2)).clamp(
+          12.0,
+          media.width - cardWidth - 12.0,
+        );
         const verticalGap = 4.0;
         final preferredTop = targetRect.top - cardHeight - verticalGap;
         final showBelow = preferredTop < 20;
@@ -358,10 +409,7 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-enum _RoleSwitchAction {
-  passenger,
-  driver,
-}
+enum _RoleSwitchAction { passenger, driver }
 
 class _RoleSwitcherCard extends StatelessWidget {
   final GermanaColors colors;
@@ -419,7 +467,8 @@ class _RoleSwitcherCard extends StatelessWidget {
                     title: 'Passenger mode',
                     subtitle: 'Discover and join rides',
                     selected: currentRole != UserRole.driver,
-                    onTap: () => Navigator.of(context).pop(_RoleSwitchAction.passenger),
+                    onTap: () =>
+                        Navigator.of(context).pop(_RoleSwitchAction.passenger),
                   ),
                   const SizedBox(height: 8),
                   _RoleSwitchTile(
@@ -427,7 +476,8 @@ class _RoleSwitcherCard extends StatelessWidget {
                     title: 'Driver mode',
                     subtitle: 'List and manage carpools',
                     selected: currentRole == UserRole.driver,
-                    onTap: () => Navigator.of(context).pop(_RoleSwitchAction.driver),
+                    onTap: () =>
+                        Navigator.of(context).pop(_RoleSwitchAction.driver),
                   ),
                 ],
               ),
@@ -490,13 +540,13 @@ class _RoleSwitchTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   ),
                 ],
               ),
