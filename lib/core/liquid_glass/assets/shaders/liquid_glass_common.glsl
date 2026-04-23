@@ -127,8 +127,9 @@ vec2 computeInsetAnchor(vec2 fragPx, vec2 normal, float sdf, float insetPx){
    DISTORTION FACTOR
    =========================== */
 float computeDistortionFactor(float u_distortion, float t){
-    float d = clamp(u_distortion,0.0,1.0) * 100.0;
-    return 1.0 + d * pow(t, d);
+    float strength = clamp(u_distortion, 0.0, 1.0) * 8.0; 
+    // Smooth quadratic curve for natural glass bending
+    return 1.0 + strength * (t * t);
 }
 //float computeDistortionFactor(float u_distortion, float zoneT) {
 //    // clamp distortion input

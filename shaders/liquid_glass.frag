@@ -56,19 +56,16 @@ out vec4 frag_color;
 
 #define PIXEL_TO_NORM(px) ((px) / u_resolution.y)
 
-vec3 applyChromaticAberration(vec2 uv, float shift) {
-    // Compute offsets based on luma
+vec3 applyChromaticAberration(vec2 uv, vec2 centerNorm, float shift) {
     vec3 color = texture(u_texture_input, uv).rgb;
-    if(shift < 0.001) return color;
-    // Luma calculation (Rec. 709)
-    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
-
-    // Offset depends on brightness
-    vec2 offset = vec2(shift * luma);
-
-    float r = texture(u_texture_input, uv + offset).r;
-    float g = texture(u_texture_input, uv).g;
-    float b = texture(u_texture_input, uv - offset).b;
+    if(shift < 0.0001) return color;
+    
+    // True optical chromatic aberration based on distance from lens center
+    vec2 dir = uv - centerNorm;
+    
+    float r = texture(u_texture_input, uv + dir * shift).r;
+    float g = color.g;
+    float b = texture(u_texture_input, uv - dir * shift).b;
 
     return vec3(r, g, b);
 }
@@ -86,12 +83,13 @@ vec3 applySaturation(vec3 color, float saturation) {
 vec4 finalSample(
     vec2 refractedPx,
     vec2 texScale,
-    float shapeMask
+    float shapeMask,
+    vec2 centerNorm
 ){
     vec3 refrColor;
 
     vec2 sampleUV = clamp(refractedPx * texScale, vec2(0.001), vec2(0.999));
-    refrColor = applyChromaticAberration(sampleUV, u_chromaticAberration);
+    refrColor = applyChromaticAberration(sampleUV, centerNorm, u_chromaticAberration);
     // Apply saturation BEFORE tinting
     refrColor = applySaturation(refrColor,u_saturation);
     vec4 base = vec4(refrColor * shapeMask, shapeMask);
@@ -182,7 +180,7 @@ void main() {
         // Outside distortion zone
         vec4 base = (u_enableBackgroundTransparency > 0.5)
         ? vec4(0.0)
-        : finalSample(magUV, texScale, shapeMask);
+        : finalSample(magUV, texScale, shapeMask, lensCenterNorm);
 
         vec4 borderPremul = getSweepBorder(
             uvNorm, lensCenterNorm, shapeData.orthoDist,shapeData.grad,
@@ -234,7 +232,7 @@ void main() {
     // ===============================
     // Final sample & border
     // ===============================
-    vec4 base = finalSample(refrUV, texScale, shapeMask);
+    vec4 base = finalSample(refrUV, texScale, shapeMask, lensCenterNorm);
 
     vec4 borderPremul = getSweepBorder(
         uvNorm, lensCenterNorm, shapeData.orthoDist,shapeData.grad,

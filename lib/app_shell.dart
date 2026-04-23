@@ -89,28 +89,63 @@ class _AppShellState extends State<AppShell> {
     final config = _configForRole(role, l10n);
     final activeIndex = _currentIndex.clamp(0, config.screens.length - 1);
     final colors = GermanaColors.of(context); // Define colors here
+    final isDark = colors.isDark;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: colors.background, // Fill the scaffold background so it's not transparent black
-      body: LiquidGlassView(
-        useSync: true,
-        pixelRatio: 0.0, // 0.0 uses device's native DPR
-        refreshRate: LiquidGlassRefreshRate.deviceRefreshRate,
-        backgroundWidget: Container(
-          color: colors.background, // Prevents transparent black from smearing into the blur
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: KeyedSubtree(
-              key: ValueKey(role),
-              child: IndexedStack(
-                index: activeIndex,
-                children: config.screens,
+      body: Stack(
+        children: [
+          LiquidGlassView(
+            useSync: true,
+            pixelRatio: 0.0, // 0.0 uses device's native DPR
+            refreshRate: LiquidGlassRefreshRate.deviceRefreshRate,
+            backgroundWidget: Container(
+              color: colors.background, // Prevents transparent black from smearing into the blur
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: KeyedSubtree(
+                  key: ValueKey(role),
+                  child: IndexedStack(
+                    index: activeIndex,
+                    children: config.screens,
+                  ),
+                ),
+              ),
+            ),
+            children: [
+              _buildNavBarLens(context, config.navItems),
+            ],
+          ),
+          // The Drop Shadow Layer behind the lens, but outside LiquidGlassView to not be refracted
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottomPadding + 16,
+            child: Center(
+              child: IgnorePointer(
+                child: Container(
+                  width: 260,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(100),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.15),
+                        blurRadius: 30,
+                        offset: const Offset(0, 15),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        children: [
-          _buildNavBarLens(context, config.navItems),
         ],
       ),
     );
@@ -134,14 +169,16 @@ class _AppShellState extends State<AppShell> {
           
       refractionMode: LiquidGlassRefractionMode.shapeRefraction,
       
-      // True optic lens physics
-      distortion: 0.12, 
-      distortionWidth: 30.0, 
-      magnification: 1.1, 
-      chromaticAberration: 0.0, 
-      saturation: 1.3, // Vibrancy
+      // Softer, smoother bend.
+      distortion: 0.10, 
+      distortionWidth: 12.0, 
+      magnification: 1.0, 
       
-      // Absolutely NO fake shader borders or shadows. Let the inner Container do the clean border.
+      // I am completely turning off chromatic aberration. 
+      // The yellow/blue ringing around the blurred text is causing the "dirty" look.
+      chromaticAberration: 0.0, 
+      saturation: 1.25, 
+      
       shape: const RoundedRectangleShape(
         cornerRadius: 100,
         borderWidth: 0.0,
@@ -156,13 +193,13 @@ class _AppShellState extends State<AppShell> {
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: isDark 
-              ? Colors.black.withValues(alpha: 0.3) 
-              : Colors.white.withValues(alpha: 0.4),
+              ? Colors.black.withValues(alpha: 0.35) 
+              : Colors.white.withValues(alpha: 0.30), // Slightly more milkiness to hide messy text contrast
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.05),
+                : Colors.black.withValues(alpha: 0.10),
             width: 0.5,
           ),
         ),
@@ -191,10 +228,21 @@ class _AppShellState extends State<AppShell> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
+                  // Replaced the dark grey blob in light mode with a luminous white
                   color: isActive
-                      ? (isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06))
+                      ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.6))
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(100),
+                  // Apple segmented control style shadow for the active item in light mode
+                  boxShadow: isActive && !isDark 
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        )
+                      ] 
+                    : null,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
