@@ -93,9 +93,9 @@ class _AppShellState extends State<AppShell> {
       body: Stack(
         children: [
           LiquidGlassView(
-            useSync: true,
-            pixelRatio: 0.0, // 0.0 uses device's native DPR
-            refreshRate: LiquidGlassRefreshRate.deviceRefreshRate,
+            useSync: false,  // async capture — yields UI thread instead of blocking it
+            pixelRatio: 1.2, // library recommends <1.0 for full-screen; 1.2 is invisible behind sigmaX=24 blur
+            refreshRate: LiquidGlassRefreshRate.high, // 60fps cap — deviceRefreshRate had zero throttle (120 captures/s on ProMotion)
             backgroundWidget: Container(
               color: colors
                   .background, // Prevents transparent black from smearing into the blur
