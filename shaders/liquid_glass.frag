@@ -102,15 +102,10 @@ vec4 finalSample(
 
 
 float computeShapeMask(float shapeDistPx) {
-    float aa = 1.0;
-
-    #ifdef GL_OES_standard_derivatives
-        aa = max(fwidth(shapeDistPx), 1.0);
-    #endif
-
-    float mask = 1.0 - smoothstep(0.0, aa, shapeDistPx);
-    mask *= step(shapeDistPx, 0.0);
-    return mask;
+    // Return 1.0 to prevent transparent black edges which cause 
+    // muddy dark shadows when ImageFilter.blur is applied.
+    // Flutter's canvas.clipRRect handles the actual shape masking cleanly.
+    return 1.0;
 }
 
 

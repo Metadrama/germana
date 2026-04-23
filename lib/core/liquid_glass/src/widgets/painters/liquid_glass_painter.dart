@@ -143,7 +143,7 @@ class LiquidGlassPainter extends CustomPainter {
       ),
     );
 
-    //canvas.save();
+    canvas.save();
     canvas.clipRRect(rectRRect);
 
     final lensPaint = Paint()..shader = shader;
@@ -155,8 +155,8 @@ class LiquidGlassPainter extends CustomPainter {
         tileMode: ui.TileMode.clamp,
       );
     }
-    canvas.drawRRect(rectRRect, lensPaint);
-    //canvas.restore();
+    canvas.drawRect(rectExpandedBorder, lensPaint);
+    canvas.restore();
 
 // --- PASS 2: BORDER SHADER (sharp, no blur) ---
     if (borderShader != null && useBlur) {
