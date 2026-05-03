@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:germana/core/app_state.dart';
@@ -9,7 +10,6 @@ import 'package:germana/screens/driver/list_ride_screen.dart';
 import 'package:germana/screens/explore/explore_screen.dart';
 import 'package:germana/screens/ledger/ledger_screen.dart';
 import 'package:germana/screens/profile/profile_screen.dart';
-import 'package:germana/core/liquid_glass/liquid_glass_easy.dart';
 
 /// Persistent shell with floating frosted pill navigation bar.
 class AppShell extends StatefulWidget {
@@ -82,47 +82,44 @@ class _AppShellState extends State<AppShell> {
     final role = _effectiveRole(state.userRole);
     final l10n = AppLocalizations.of(context);
     final config = _configForRole(role, l10n);
-    final activeIndex = _currentIndex.clamp(0, config.screens.length - 1);
     final colors = GermanaColors.of(context);
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      backgroundColor: colors
-          .background, // Fill the scaffold background so it's not transparent black
+      backgroundColor: colors.background,
       body: Stack(
         children: [
-          LiquidGlassView(
-            useSync:
-                false, // async capture — yields UI thread instead of blocking it
-            pixelRatio:
-                0.0, // MUST BE 0.0 (Native). Any other value breaks the shader's UV coordinates and crops the blur!
-            refreshRate: LiquidGlassRefreshRate.high, // full fluid framerate
-            backgroundWidget: Container(
-              color: colors
-                  .background, // Prevents transparent black from smearing into the blur
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: KeyedSubtree(
-                  key: ValueKey(role),
-                  child: IndexedStack(
-                    index: activeIndex,
-                    children: config.screens,
-                  ),
-                ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: KeyedSubtree(
+              key: ValueKey(role),
+              child: IndexedStack(
+                index: _currentIndex.clamp(0, config.screens.length - 1),
+                children: config.screens,
               ),
             ),
-            children: [
-              _buildNavBarLens(context, config.navItems),
-              _buildActionButtonLens(context),
-            ],
           ),
-          // The Drop Shadow Layer behind the lens, but outside LiquidGlassView to not be refracted
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: bottomPadding + 16,
+            left: 12,
+            right: 12,
+            bottom: bottomPadding + 12,
             child: Center(
-              child: IgnorePointer(child: Container(width: 260, height: 64)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 260,
+                    height: 60,
+                    child: _buildNavBar(context, config.navItems),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: _buildActionButton(context),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -130,69 +127,40 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  LiquidGlass _buildNavBarLens(BuildContext context, List<_NavItem> navItems) {
+  Widget _buildNavBar(BuildContext context, List<_NavItem> navItems) {
     final colors = GermanaColors.of(context);
     final isDark = colors.isDark;
-    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
-    return LiquidGlass(
-      height: 60,
-      width: 260,
-      position: LiquidGlassAlignPosition(
-        alignment: Alignment.bottomCenter,
-        margin: EdgeInsets.only(bottom: bottomPadding + 16, right: 72),
-      ),
-      blur: const LiquidGlassBlur(
-        sigmaX:
-            18, // Reduced from 32 so the edge distortion lens effect isn't blurred into flat mush
-        sigmaY: 18,
-      ), // Slightly more frosty to smooth out the blocky text
-
-      color: Colors.transparent,
-
-      refractionMode: LiquidGlassRefractionMode.shapeRefraction,
-
-      // Stronger, wider bend at the edge to give it a physical extruded glass look
-      distortion: 0.15,
-      distortionWidth: 16.0,
-      magnification: 1.07,
-
-      // I am completely turning off chromatic aberration.
-      // The yellow/blue ringing around the blurred text is causing the "dirty" look.
-      chromaticAberration: 0,
-      saturation:
-          1.0, // Back to 1.0. The vibrancy was causing light mode backgrounds to over-saturate and look muddy/grey.
-      shape: const RoundedRectangleShape(
-        cornerRadius: 100, // Restored the pill shape mask!
-        borderWidth: 0.0,
-        borderSoftness: 0.0,
-        lightIntensity: 0.0,
-        lightColor: Colors.transparent,
-        shadowColor: Colors.transparent,
-        oneSideLightIntensity: 0.0,
-      ),
-
-      child: SizedBox(
-        width: 260,
-        height: 60,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(100),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 1. Base Dark/Light Glass Wash
             Container(
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xFF2A2A2D).withValues(
-                        alpha: 0.50,
-                      ) // Greyish dark, perfectly translucent
-                    : Colors.white.withValues(alpha: 0.65),
+                    ? const Color(0xFF2A2A2D).withValues(alpha: 0.35)
+                    : Colors.white.withValues(alpha: 0.75),
                 borderRadius: BorderRadius.circular(100),
               ),
             ),
-            // 2. Sliding Active Pill Background (Placed UNDER the lighting for seamless integration)
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+            ),
             AnimatedPositioned(
               duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutQuart, // Sharp fast start, firm smooth stop
+              curve: Curves.easeOutQuart,
               left: 5.5 + (_currentIndex * (260 / navItems.length)),
               top: 5.5,
               width: (260 / navItems.length) - 11.0,
@@ -200,72 +168,41 @@ class _AppShellState extends State<AppShell> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(100),
-                  color: isDark
-                      ? const Color.fromARGB(
-                          255,
-                          165,
-                          165,
-                          165,
-                        ).withValues(alpha: 0.19)
-                      : Colors.black.withValues(alpha: 0.08),
+                  color: AppColors.accentBlue.withValues(alpha: 0.12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentBlue.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
               ),
             ),
-            // 3. iOS Native Smooth Lighting (Overlays both the base wash AND the active pill)
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(100),
-                  // Crisp pronounced thin outer edge (sub-pixel perfect)
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.15)
-                        : Colors.black.withValues(
-                            alpha: 0.04,
-                          ), // Softened to avoid looking like a flat grey line
-                    width: 0.5,
-                    strokeAlign: BorderSide.strokeAlignInside,
-                  ),
-                  // Smooth gradient for the inner shadow / light bevel
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : Colors.white.withValues(
-                              alpha: 0.25,
-                            ), // Soft top-left highlight
-                      Colors.transparent,
-                      Colors.transparent,
-                      isDark
-                          ? Colors.black.withValues(alpha: 0.25)
-                          : Colors.black.withValues(
-                              alpha: 0.05,
-                            ), // Soft bottom-right inner shadow
-                    ],
-                    stops: const [
-                      0.0,
-                      0.15,
-                      0.85,
-                      1.0,
-                    ], // Keeps the shadow strictly to the edges, not reaching far inward
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.black.withValues(alpha: 0.08),
+                    width: 1,
                   ),
                 ),
               ),
             ),
-            // 3. Nav Items
             Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(navItems.length, (index) {
                 final item = navItems[index];
                 final isActive = index == _currentIndex;
-                final activeColor = AppColors.accentBlue;
-                final inactiveColor = isDark
-                    ? Colors.white
-                    : const Color(0xFF3C3C43);
-                final color = isActive ? activeColor : inactiveColor;
+                final color = isActive
+                    ? AppColors.accentBlue
+                    : (isDark
+                        ? Colors.white.withValues(alpha: 0.75)
+                        : const Color(0xFF3C3C43).withValues(alpha: 0.65));
 
                 return GestureDetector(
                   key: _navItemKeys[index],
@@ -277,9 +214,8 @@ class _AppShellState extends State<AppShell> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOutCubic,
-                    height: 60, // Full height for larger tap target
-                    width: 260 / navItems.length, // Exact fractional width
-                    margin: EdgeInsets.zero,
+                    height: 60,
+                    width: 260 / navItems.length,
                     color: Colors.transparent,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -313,38 +249,14 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  LiquidGlass _buildActionButtonLens(BuildContext context) {
+  Widget _buildActionButton(BuildContext context) {
     final colors = GermanaColors.of(context);
     final isDark = colors.isDark;
-    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
-    return LiquidGlass(
-      height: 60,
-      width: 60,
-      position: LiquidGlassAlignPosition(
-        alignment: Alignment.bottomCenter,
-        margin: EdgeInsets.only(bottom: bottomPadding + 16, left: 272),
-      ),
-      blur: const LiquidGlassBlur(sigmaX: 18, sigmaY: 18),
-      color: Colors.transparent,
-      refractionMode: LiquidGlassRefractionMode.shapeRefraction,
-      distortion: 0.15,
-      distortionWidth: 16.0,
-      magnification: 1.07,
-      chromaticAberration: 0,
-      saturation: 1.0,
-      shape: const RoundedRectangleShape(
-        cornerRadius: 100,
-        borderWidth: 0.0,
-        borderSoftness: 0.0,
-        lightIntensity: 0.0,
-        lightColor: Colors.transparent,
-        shadowColor: Colors.transparent,
-        oneSideLightIntensity: 0.0,
-      ),
-      child: SizedBox(
-        width: 60,
-        height: 60,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(100),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -352,53 +264,43 @@ class _AppShellState extends State<AppShell> {
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF2A2A2D).withValues(alpha: 0.35)
-                    : Colors.white.withValues(alpha: 0.70),
-                borderRadius: BorderRadius.circular(100),
+                    : Colors.white.withValues(alpha: 0.75),
+                shape: BoxShape.circle,
               ),
             ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.15)
-                        : Colors.black.withValues(alpha: 0.04),
-                    width: 0.5,
-                    strokeAlign: BorderSide.strokeAlignInside,
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
                   ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : Colors.white.withValues(alpha: 0.25),
-                      Colors.transparent,
-                      Colors.transparent,
-                      isDark
-                          ? Colors.black.withValues(alpha: 0.25)
-                          : Colors.black.withValues(alpha: 0.05),
-                    ],
-                    stops: const [0.0, 0.15, 0.85, 1.0],
-                  ),
+                ],
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08),
+                  width: 1,
                 ),
               ),
             ),
             GestureDetector(
-              onTap: () {
-                // Action for the circular button
-              },
+              onTap: () {},
               behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 60,
-                height: 60,
-                child: Center(
-                  child: Icon(
-                    CupertinoIcons.search,
-                    size: 24,
-                    color: isDark ? Colors.white : const Color(0xFF3C3C43),
-                  ),
+              child: Center(
+                child: Icon(
+                  CupertinoIcons.search,
+                  size: 24,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.75)
+                      : const Color(0xFF3C3C43).withValues(alpha: 0.65),
                 ),
               ),
             ),
